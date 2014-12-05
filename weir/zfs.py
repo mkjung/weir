@@ -3,6 +3,32 @@ import subprocess
 
 log = logging.getLogger(__name__)
 
+
+def find(name=None, depth=None, types=['filesystem']):
+	datasets = listprops(name, ['name'], depth=depth, types=types)
+	return [dataset['name'] for dataset in datasets]
+
+def root_datasets():
+	return find(depth=0)
+
+def filesystems(dataset, recursive=False):
+	depth = None if recursive else 1
+	return find(dataset, depth=depth, types=['filesystem'])[1:]
+
+def snapshots(dataset, recursive=False):
+	depth = None if recursive else 1
+	return find(dataset, depth=depth, types=['snapshot'])
+
+def children(dataset, recursive=False):
+	depth = None if recursive else 1
+	return find(dataset, depth=depth, types=['all'])[1:]
+
+def clones(dataset, recursive=False):
+	raise NotImplementedError()
+
+def dependents(dataset, recursive=False):
+	raise NotImplementedError()
+
 # note: force means create missing parent filesystems
 def create(name, type='filesystem', props={}, force=False):
 	raise NotImplementedError()
@@ -32,7 +58,7 @@ def rename(dataset, name, recursive=False, force=False):
 def listprops(dataset, props, depth=0, types=[]):
 	cmd = ['zfs', 'list']
 
-	if depth > 0:
+	if depth >= 0:
 		cmd.append('-d')
 		cmd.append(str(depth))
 	elif depth < 0:
@@ -47,7 +73,8 @@ def listprops(dataset, props, depth=0, types=[]):
 	cmd.append('-o')
 	cmd.append(','.join(props))
 
-	cmd.append(dataset)
+	if dataset:
+		cmd.append(dataset)
 
 	# execute command, capturing stdout and stderr
 	log.debug(' '.join(cmd))
