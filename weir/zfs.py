@@ -6,28 +6,35 @@ log = logging.getLogger(__name__)
 
 def find(name=None, depth=None, types=['filesystem']):
 	datasets = listprops(name, ['name'], depth=depth, types=types)
-	return [dataset['name'] for dataset in datasets]
+	return [ZFSDataset(dataset['name']) for dataset in datasets]
 
 def root_datasets():
 	return find(depth=0)
 
-def filesystems(dataset, recursive=False):
-	depth = None if recursive else 1
-	return find(dataset, depth=depth, types=['filesystem'])[1:]
+class ZFSDataset(object):
+	def __init__(self, name):
+		self.name = name
 
-def snapshots(dataset, recursive=False):
-	depth = None if recursive else 1
-	return find(dataset, depth=depth, types=['snapshot'])
+	def __str__(self):
+		return self.name
 
-def children(dataset, recursive=False):
-	depth = None if recursive else 1
-	return find(dataset, depth=depth, types=['all'])[1:]
+	def filesystems(self, recursive=False):
+		depth = None if recursive else 1
+		return find(self.name, depth=depth, types=['filesystem'])[1:]
 
-def clones(dataset, recursive=False):
-	raise NotImplementedError()
+	def snapshots(self, recursive=False):
+		depth = None if recursive else 1
+		return find(self.name, depth=depth, types=['snapshot'])
 
-def dependents(dataset, recursive=False):
-	raise NotImplementedError()
+	def children(self, recursive=False):
+		depth = None if recursive else 1
+		return find(self.name, depth=depth, types=['all'])[1:]
+
+	def clones(self, recursive=False):
+		raise NotImplementedError()
+
+	def dependents(self, recursive=False):
+		raise NotImplementedError()
 
 # note: force means create missing parent filesystems
 def create(name, type='filesystem', props={}, force=False):
