@@ -12,8 +12,30 @@ def receive(name, append=None, force=False, nomount=False):
 	raise NotImplementedError()
 
 def find(name=None, depth=None, types=['filesystem']):
-	datasets = listprops(name, ['name'], depth=depth, types=types)
-	return [ZFSDataset(dataset['name']) for dataset in datasets]
+	cmd = ['zfs', 'list']
+
+	if depth >= 0:
+		cmd.append('-d')
+		cmd.append(str(depth))
+	elif depth < 0:
+		cmd.append('-r')
+
+	if types:
+		cmd.append('-t')
+		cmd.append(','.join(types))
+
+	cmd.append('-H')
+
+	cmd.append('-o')
+	cmd.append('name')
+
+	if name:
+		cmd.append(name)
+
+	# execute command, capturing stdout and stderr
+	log.debug(' '.join(cmd))
+	out = subprocess.check_output(cmd)
+	return [ZFSDataset(name) for name in out.splitlines()]
 
 def root_datasets():
 	return find(depth=0)
@@ -116,35 +138,6 @@ class ZFSDataset(object):
 
 	def release(self, tag, recursive=False):
 		return release(self.name, tag, recursive=recursive)
-
-def listprops(dataset, props, depth=0, types=[]):
-	cmd = ['zfs', 'list']
-
-	if depth >= 0:
-		cmd.append('-d')
-		cmd.append(str(depth))
-	elif depth < 0:
-		cmd.append('-r')
-
-	if types:
-		cmd.append('-t')
-		cmd.append(','.join(types))
-
-	cmd.append('-H')
-
-	cmd.append('-o')
-	cmd.append(','.join(props))
-
-	if dataset:
-		cmd.append(dataset)
-
-	# execute command, capturing stdout and stderr
-	log.debug(' '.join(cmd))
-	out = subprocess.check_output(cmd)
-
-	# return parsed list output
-	rows = (line.split('\t') for line in out.splitlines())
-	return [dict(zip(props, row)) for row in rows]
 
 def setprop(dataset, prop, value):
 	cmd = ['zfs', 'set']
