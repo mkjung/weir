@@ -8,6 +8,9 @@ log = logging.getLogger(__name__)
 def create(name, type='filesystem', props={}, force=False):
 	raise NotImplementedError()
 
+def receive(name, append=None, force=False, nomount=False):
+	raise NotImplementedError()
+
 def find(name=None, depth=None, types=['filesystem']):
 	datasets = listprops(name, ['name'], depth=depth, types=types)
 	return [ZFSDataset(dataset['name']) for dataset in datasets]
@@ -61,6 +64,58 @@ class ZFSDataset(object):
 	# TODO: split force to allow -f and -p to be specified individually
 	def rename(self, name, recursive=False, force=False):
 		raise NotImplementedError()
+
+	def getprop(self, prop):
+		return getprops(self.name, [prop])[0]
+
+	def getpropval(self, prop):
+		return self.getprop(prop)[2]
+
+	def setprop(self, prop, value):
+		return setprop(self.name, prop, value)
+
+	def delprop(self, prop):
+		return delprop(self.name, prop)
+
+	def upgrade(self, *args, **kwargs):
+		raise NotImplementedError()
+
+	def userspace(self, *args, **kwargs):
+		raise NotImplementedError()
+
+	def groupspace(self, *args, **kwargs):
+		raise NotImplementedError()
+
+	def mount(self, *args, **kwargs):
+		raise NotImplementedError()
+
+	def unmount(self, *args, **kwargs):
+		raise NotImplementedError()
+
+	def share(self, *args, **kwargs):
+		raise NotImplementedError()
+
+	def unshare(self, *args, **kwargs):
+		raise NotImplementedError()
+
+	def send(self, from_snapshot=None, to_snapshot=None, intermediates=False,
+			replicate=False, properties=False, deduplicate=False):
+		raise NotImplementedError()
+
+	def allow(self, *args, **kwargs):
+		raise NotImplementedError()
+
+	def unallow(self, *args, **kwargs):
+		raise NotImplementedError()
+
+	def hold(self, tag, recursive=False):
+		return hold(self.name, tag, recursive=recursive)
+
+	def holds(self):
+		return holds(self.name)
+
+	def release(self, tag, recursive=False):
+		return release(self.name, tag, recursive=recursive)
 
 def listprops(dataset, props, depth=0, types=[]):
 	cmd = ['zfs', 'list']
@@ -127,12 +182,6 @@ def getprops(dataset, props, depth=0, sources=[]):
 	# return parsed output as list of (name, property, value, source) tuples
 	return [tuple(line.split('\t')) for line in out.splitlines()]
 
-def getprop(dataset, prop):
-	return getprops(dataset, [prop])[0]
-
-def getpropval(dataset, prop):
-	return getprop(dataset, prop)[2]
-
 def delprop(dataset, prop, recursive=False):
 	cmd = ['zfs', 'inherit']
 
@@ -144,40 +193,6 @@ def delprop(dataset, prop, recursive=False):
 
 	log.debug(' '.join(cmd))
 	subprocess.check_call(cmd)
-
-def upgrade(*args, **kwargs):
-	raise NotImplementedError()
-
-def userspace(*args, **kwargs):
-	raise NotImplementedError()
-
-def groupspace(*args, **kwargs):
-	raise NotImplementedError()
-
-def mount(*args, **kwargs):
-	raise NotImplementedError()
-
-def unmount(*args, **kwargs):
-	raise NotImplementedError()
-
-def share(*args, **kwargs):
-	raise NotImplementedError()
-
-def unshare(*args, **kwargs):
-	raise NotImplementedError()
-
-def send(volume, from_snapshot=None, to_snapshot=None, intermediates=False,
-		replicate=False, properties=False, deduplicate=False):
-	raise NotImplementedError()
-
-def receive(name, append=None, force=False, nomount=False):
-	raise NotImplementedError()
-
-def allow(*args, **kwargs):
-	raise NotImplementedError()
-
-def unallow(*args, **kwargs):
-	raise NotImplementedError()
 
 def hold(snapshot, tag, recursive=False):
 	cmd = ['zfs', 'hold']
