@@ -11,15 +11,17 @@ def create(name, type='filesystem', props={}, force=False):
 def receive(name, append=None, force=False, nomount=False):
 	raise NotImplementedError()
 
-def find(name=None, depth=None, types=['filesystem']):
+def find(*paths, **kwargs):
 	cmd = ['zfs', 'list']
 
+	depth = kwargs.get('depth', None)
 	if depth >= 0:
 		cmd.append('-d')
 		cmd.append(str(depth))
 	elif depth < 0:
 		cmd.append('-r')
 
+	types = kwargs.get('types', ['all'])
 	if types:
 		cmd.append('-t')
 		cmd.append(','.join(types))
@@ -29,8 +31,8 @@ def find(name=None, depth=None, types=['filesystem']):
 	cmd.append('-o')
 	cmd.append('name')
 
-	if name:
-		cmd.append(name)
+	for path in paths:
+		cmd.append(path)
 
 	# execute command, capturing stdout and stderr
 	log.debug(' '.join(cmd))
