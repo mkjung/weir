@@ -4,6 +4,10 @@ import subprocess
 log = logging.getLogger(__name__)
 
 
+# note: force means create missing parent filesystems
+def create(name, type='filesystem', props={}, force=False):
+	raise NotImplementedError()
+
 def find(name=None, depth=None, types=['filesystem']):
 	datasets = listprops(name, ['name'], depth=depth, types=types)
 	return [ZFSDataset(dataset['name']) for dataset in datasets]
@@ -36,31 +40,27 @@ class ZFSDataset(object):
 	def dependents(self, recursive=False):
 		raise NotImplementedError()
 
-# note: force means create missing parent filesystems
-def create(name, type='filesystem', props={}, force=False):
-	raise NotImplementedError()
+	# TODO: split force to allow -f, -r and -R to be specified individually
+	def destroy(self, defer=False, force=False):
+		raise NotImplementedError()
 
-# TODO: split force to allow -f, -r and -R to be specified individually
-def destroy(dataset, defer=False, force=False):
-	raise NotImplementedError()
+	def snapshot(self, snapname, props={}, recursive=False):
+		raise NotImplementedError()
 
-def snapshot(volume, snapname, props={}, recursive=False):
-	raise NotImplementedError()
+	# TODO: split force to allow -f, -r and -R to be specified individually
+	def rollback(self, snapname, force=False):
+		raise NotImplementedError()
 
-# TODO: split force to allow -f, -r and -R to be specified individually
-def rollback(volume, snapname, force=False):
-	raise NotImplementedError()
+	# note: force means create missing parent filesystems
+	def clone(self, name, props={}, force=False):
+		raise NotImplementedError()
 
-# note: force means create missing parent filesystems
-def clone(snapshot, name, props={}, force=False):
-	raise NotImplementedError()
+	def promote(self):
+		raise NotImplementedError()
 
-def promote(clone):
-	raise NotImplementedError()
-
-# TODO: split force to allow -f and -p to be specified individually
-def rename(dataset, name, recursive=False, force=False):
-	raise NotImplementedError()
+	# TODO: split force to allow -f and -p to be specified individually
+	def rename(self, name, recursive=False, force=False):
+		raise NotImplementedError()
 
 def listprops(dataset, props, depth=0, types=[]):
 	cmd = ['zfs', 'list']
