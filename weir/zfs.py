@@ -4,12 +4,32 @@ import subprocess
 log = logging.getLogger(__name__)
 
 
-# note: force means create missing parent filesystems
-def create(name, type='filesystem', props={}, force=False):
-	raise NotImplementedError()
+def getprops(dataset, props, depth=0, sources=[]):
+	cmd = ['zfs', 'get']
 
-def receive(name, append=None, force=False, nomount=False):
-	raise NotImplementedError()
+	if depth > 0:
+		cmd.append('-d')
+		cmd.append(str(depth))
+	elif depth < 0:
+		cmd.append('-r')
+
+	if sources:
+		cmd.append('-s')
+		cmd.append(','.join(sources))
+
+	cmd.append('-H')
+	cmd.append('-p')
+
+	cmd.append(','.join(props))
+
+	cmd.append(dataset)
+
+	# execute command, capturing stdout and stderr
+	log.debug(' '.join(cmd))
+	out = subprocess.check_output(cmd)
+
+	# return parsed output as list of (name, property, value, source) tuples
+	return [tuple(line.split('\t')) for line in out.splitlines()]
 
 def find(*paths, **kwargs):
 	cmd = ['zfs', 'list']
@@ -41,6 +61,13 @@ def find(*paths, **kwargs):
 
 def root_datasets():
 	return find(depth=0)
+
+# note: force means create missing parent filesystems
+def create(name, type='filesystem', props={}, force=False):
+	raise NotImplementedError()
+
+def receive(name, append=None, force=False, nomount=False):
+	raise NotImplementedError()
 
 class ZFSDataset(object):
 	def __init__(self, name):
@@ -96,10 +123,25 @@ class ZFSDataset(object):
 		return self.getprop(prop)[2]
 
 	def setprop(self, prop, value):
-		return setprop(self.name, prop, value)
+		cmd = ['zfs', 'set']
 
-	def delprop(self, prop):
-		return delprop(self.name, prop)
+		cmd.append(prop + '=' + str(value))
+		cmd.append(self.name)
+
+		log.debug(' '.join(cmd))
+		subprocess.check_call(cmd)
+
+	def delprop(self, prop, recursive=False):
+		cmd = ['zfs', 'inherit']
+
+		if recursive:
+			cmd.append('-r')
+
+		cmd.append(prop)
+		cmd.append(self.name)
+
+		log.debug(' '.join(cmd))
+		subprocess.check_call(cmd)
 
 	def upgrade(self, *args, **kwargs):
 		raise NotImplementedError()
@@ -133,96 +175,39 @@ class ZFSDataset(object):
 		raise NotImplementedError()
 
 	def hold(self, tag, recursive=False):
-		return hold(self.name, tag, recursive=recursive)
+		cmd = ['zfs', 'hold']
+
+		if recursive:
+			cmd.append('-r')
+
+		cmd.append(tag)
+		cmd.append(self.name)
+
+		log.debug(' '.join(cmd))
+		subprocess.check_call(cmd)
 
 	def holds(self):
-		return holds(self.name)
+		cmd = ['zfs', 'holds']
+
+		cmd.append('-H')
+
+		cmd.append(self.name)
+
+		# execute command, capturing stdout and stderr
+		log.debug(' '.join(cmd))
+		out = subprocess.check_output(cmd)
+
+		# return parsed output as list of hold tags
+		return [line.split('\t')[1] for line in out.splitlines()]
 
 	def release(self, tag, recursive=False):
-		return release(self.name, tag, recursive=recursive)
+		cmd = ['zfs', 'release']
 
-def setprop(dataset, prop, value):
-	cmd = ['zfs', 'set']
+		if recursive:
+			cmd.append('-r')
 
-	cmd.append(prop + '=' + str(value))
-	cmd.append(dataset)
+		cmd.append(tag)
+		cmd.append(self.name)
 
-	log.debug(' '.join(cmd))
-	subprocess.check_call(cmd)
-
-def getprops(dataset, props, depth=0, sources=[]):
-	cmd = ['zfs', 'get']
-
-	if depth > 0:
-		cmd.append('-d')
-		cmd.append(str(depth))
-	elif depth < 0:
-		cmd.append('-r')
-
-	if sources:
-		cmd.append('-s')
-		cmd.append(','.join(sources))
-
-	cmd.append('-H')
-	cmd.append('-p')
-
-	cmd.append(','.join(props))
-
-	cmd.append(dataset)
-
-	# execute command, capturing stdout and stderr
-	log.debug(' '.join(cmd))
-	out = subprocess.check_output(cmd)
-
-	# return parsed output as list of (name, property, value, source) tuples
-	return [tuple(line.split('\t')) for line in out.splitlines()]
-
-def delprop(dataset, prop, recursive=False):
-	cmd = ['zfs', 'inherit']
-
-	if recursive:
-		cmd.append('-r')
-
-	cmd.append(prop)
-	cmd.append(dataset)
-
-	log.debug(' '.join(cmd))
-	subprocess.check_call(cmd)
-
-def hold(snapshot, tag, recursive=False):
-	cmd = ['zfs', 'hold']
-
-	if recursive:
-		cmd.append('-r')
-
-	cmd.append(tag)
-	cmd.append(snapshot)
-
-	log.debug(' '.join(cmd))
-	subprocess.check_call(cmd)
-
-def holds(snapshot):
-	cmd = ['zfs', 'holds']
-
-	cmd.append('-H')
-
-	cmd.append(snapshot)
-
-	# execute command, capturing stdout and stderr
-	log.debug(' '.join(cmd))
-	out = subprocess.check_output(cmd)
-
-	# return parsed output as list of hold tags
-	return [line.split('\t')[1] for line in out.splitlines()]
-
-def release(snapshot, tag, recursive=False):
-	cmd = ['zfs', 'release']
-
-	if recursive:
-		cmd.append('-r')
-
-	cmd.append(tag)
-	cmd.append(snapshot)
-
-	log.debug(' '.join(cmd))
-	subprocess.check_call(cmd)
+		log.debug(' '.join(cmd))
+		subprocess.check_call(cmd)
