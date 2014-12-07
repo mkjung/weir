@@ -116,6 +116,9 @@ class ZFSDataset(object):
 	def rename(self, name, recursive=False, force=False):
 		raise NotImplementedError()
 
+	def getprops(self):
+		return getprops(self.name, ['all'])
+
 	def getprop(self, prop):
 		return getprops(self.name, [prop])[0]
 
