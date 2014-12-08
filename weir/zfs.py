@@ -61,7 +61,8 @@ def _list(datasets, props, depth=0, types=[]):
 	rows = (line.split('\t') for line in out.splitlines())
 	return [dict(zip(props, row)) for row in rows]
 
-def open(name, type=None):
+# Internal factory function to instantiate dataset object
+def _dataset(type, name):
 	if type == 'volume':
 		return ZFSVolume(name)
 
@@ -77,7 +78,10 @@ def find(*paths, **kwargs):
 	depth = kwargs.get('depth', None)
 	types = kwargs.get('types', ['all'])
 	datasets = _list(paths, ('name', 'type'), depth=depth, types=types)
-	return [open(d['name'], d['type']) for d in datasets]
+	return [_dataset(d['type'], d['name']) for d in datasets]
+
+def open(name, types=[]):
+	return find(name, depth=0, types=types)[0]
 
 def root_datasets():
 	return find(depth=0)
