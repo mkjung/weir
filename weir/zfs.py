@@ -118,10 +118,6 @@ class ZFSDataset(object):
 	def rollback(self, snapname, force=False):
 		raise NotImplementedError()
 
-	# note: force means create missing parent filesystems
-	def clone(self, name, props={}, force=False):
-		raise NotImplementedError()
-
 	def promote(self):
 		raise NotImplementedError()
 
@@ -159,19 +155,10 @@ class ZFSDataset(object):
 		log.debug(' '.join(cmd))
 		subprocess.check_call(cmd)
 
-	def upgrade(self, *args, **kwargs):
-		raise NotImplementedError()
-
 	def userspace(self, *args, **kwargs):
 		raise NotImplementedError()
 
 	def groupspace(self, *args, **kwargs):
-		raise NotImplementedError()
-
-	def mount(self, *args, **kwargs):
-		raise NotImplementedError()
-
-	def unmount(self, *args, **kwargs):
 		raise NotImplementedError()
 
 	def share(self, *args, **kwargs):
@@ -180,14 +167,32 @@ class ZFSDataset(object):
 	def unshare(self, *args, **kwargs):
 		raise NotImplementedError()
 
-	def send(self, from_snapshot=None, to_snapshot=None, intermediates=False,
-			replicate=False, properties=False, deduplicate=False):
-		raise NotImplementedError()
-
 	def allow(self, *args, **kwargs):
 		raise NotImplementedError()
 
 	def unallow(self, *args, **kwargs):
+		raise NotImplementedError()
+
+class ZFSVolume(ZFSDataset):
+	pass
+
+class ZFSFilesystem(ZFSDataset):
+	def upgrade(self, *args, **kwargs):
+		raise NotImplementedError()
+
+	def mount(self, *args, **kwargs):
+		raise NotImplementedError()
+
+	def unmount(self, *args, **kwargs):
+		raise NotImplementedError()
+
+class ZFSSnapshot(ZFSDataset):
+	# note: force means create missing parent filesystems
+	def clone(self, name, props={}, force=False):
+		raise NotImplementedError()
+
+	def send(self, from_snapshot=None, intermediates=False,
+			replicate=False, properties=False, deduplicate=False):
 		raise NotImplementedError()
 
 	def hold(self, tag, recursive=False):
@@ -227,12 +232,3 @@ class ZFSDataset(object):
 
 		log.debug(' '.join(cmd))
 		subprocess.check_call(cmd)
-
-class ZFSVolume(ZFSDataset):
-	pass
-
-class ZFSFilesystem(ZFSDataset):
-	pass
-
-class ZFSSnapshot(ZFSDataset):
-	pass
