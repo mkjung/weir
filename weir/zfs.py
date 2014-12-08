@@ -49,7 +49,7 @@ def find(*paths, **kwargs):
 	cmd.append('-H')
 
 	cmd.append('-o')
-	cmd.append('name')
+	cmd.append('name,type')
 
 	for path in paths:
 		cmd.append(path)
@@ -57,10 +57,23 @@ def find(*paths, **kwargs):
 	# execute command, capturing stdout and stderr
 	log.debug(' '.join(cmd))
 	out = subprocess.check_output(cmd)
-	return [ZFSDataset(name) for name in out.splitlines()]
+	rows = (line.split('\t') for line in out.splitlines())
+	return [open(name, type) for name, type in rows]
 
 def root_datasets():
 	return find(depth=0)
+
+def open(name, type=None):
+	if type == 'volume':
+		return ZFSVolume(name)
+
+	if type == 'filesystem':
+		return ZFSFilesystem(name)
+
+	if type == 'snapshot':
+		return ZFSSnapshot(name)
+
+	raise ValueError('invalid dataset type %s' % type)
 
 # note: force means create missing parent filesystems
 def create(name, type='filesystem', props={}, force=False):
@@ -214,3 +227,12 @@ class ZFSDataset(object):
 
 		log.debug(' '.join(cmd))
 		subprocess.check_call(cmd)
+
+class ZFSVolume(ZFSDataset):
+	pass
+
+class ZFSFilesystem(ZFSDataset):
+	pass
+
+class ZFSSnapshot(ZFSDataset):
+	pass
