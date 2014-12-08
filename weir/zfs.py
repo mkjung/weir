@@ -4,7 +4,8 @@ import subprocess
 log = logging.getLogger(__name__)
 
 
-def getprops(dataset, props, depth=0, sources=[]):
+# Low level wrapper around zfs get command
+def _get(datasets, props, depth=0, sources=[]):
 	cmd = ['zfs', 'get']
 
 	if depth > 0:
@@ -22,26 +23,25 @@ def getprops(dataset, props, depth=0, sources=[]):
 
 	cmd.append(','.join(props))
 
-	cmd.append(dataset)
+	cmd.extend(datasets)
 
-	# execute command, capturing stdout and stderr
+	# execute command, capturing stdout
 	log.debug(' '.join(cmd))
 	out = subprocess.check_output(cmd)
 
 	# return parsed output as list of (name, property, value, source) tuples
 	return [tuple(line.split('\t')) for line in out.splitlines()]
 
-def find(*paths, **kwargs):
+# Low level wrapper around zfs list command
+def _list(datasets, props, depth=0, types=[]):
 	cmd = ['zfs', 'list']
 
-	depth = kwargs.get('depth', None)
 	if depth >= 0:
 		cmd.append('-d')
 		cmd.append(str(depth))
 	elif depth < 0:
 		cmd.append('-r')
 
-	types = kwargs.get('types', ['all'])
 	if types:
 		cmd.append('-t')
 		cmd.append(','.join(types))
@@ -49,19 +49,17 @@ def find(*paths, **kwargs):
 	cmd.append('-H')
 
 	cmd.append('-o')
-	cmd.append('name,type')
+	cmd.append(','.join(props))
 
-	for path in paths:
-		cmd.append(path)
+	cmd.extend(datasets)
 
-	# execute command, capturing stdout and stderr
+	# execute command, capturing stdout
 	log.debug(' '.join(cmd))
 	out = subprocess.check_output(cmd)
-	rows = (line.split('\t') for line in out.splitlines())
-	return [open(name, type) for name, type in rows]
 
-def root_datasets():
-	return find(depth=0)
+	# return parsed output as list of dicts
+	rows = (line.split('\t') for line in out.splitlines())
+	return [dict(zip(props, row)) for row in rows]
 
 def open(name, type=None):
 	if type == 'volume':
@@ -74,6 +72,15 @@ def open(name, type=None):
 		return ZFSSnapshot(name)
 
 	raise ValueError('invalid dataset type %s' % type)
+
+def find(*paths, **kwargs):
+	depth = kwargs.get('depth', None)
+	types = kwargs.get('types', ['all'])
+	datasets = _list(paths, ('name', 'type'), depth=depth, types=types)
+	return [open(d['name'], d['type']) for d in datasets]
+
+def root_datasets():
+	return find(depth=0)
 
 # note: force means create missing parent filesystems
 def create(name, type='filesystem', props={}, force=False):
@@ -126,10 +133,10 @@ class ZFSDataset(object):
 		raise NotImplementedError()
 
 	def getprops(self):
-		return getprops(self.name, ['all'])
+		return _get([self.name], ['all'])
 
 	def getprop(self, prop):
-		return getprops(self.name, [prop])[0]
+		return _get([self.name], [prop])[0]
 
 	def getpropval(self, prop):
 		return self.getprop(prop)[2]
