@@ -88,7 +88,25 @@ def root_datasets():
 
 # note: force means create missing parent filesystems
 def create(name, type='filesystem', props={}, force=False):
-	raise NotImplementedError()
+		cmd = ['zfs', 'create']
+
+		if type == 'volume':
+			raise NotImplementedError()
+		elif type != 'filesystem':
+			raise ValueError('invalid type %s' % type)
+
+		if force:
+			cmd.append('-p')
+
+		for prop, value in props.iteritems():
+			cmd.append('-o')
+			cmd.append(prop + '=' + str(value))
+
+		cmd.append(name)
+
+		log.debug(' '.join(cmd))
+		subprocess.check_call(cmd)
+		return ZFSFilesystem(name)
 
 def receive_async(name, append_name=False, append_path=False,
 		force=False, nomount=False, stdin=None):
@@ -145,11 +163,38 @@ class ZFSDataset(object):
 		raise NotImplementedError()
 
 	# TODO: split force to allow -f, -r and -R to be specified individually
+	# TODO: remove or ignore defer option for non-snapshot datasets
 	def destroy(self, defer=False, force=False):
-		raise NotImplementedError()
+		cmd = ['zfs', 'destroy']
 
-	def snapshot(self, snapname, props={}, recursive=False):
-		raise NotImplementedError()
+		if defer:
+			cmd.append('-d')
+
+		if force:
+			cmd.append('-f')
+			cmd.append('-R')
+
+		cmd.append(self.name)
+
+		log.debug(' '.join(cmd))
+		subprocess.check_call(cmd)
+
+	def snapshot(self, snapname, recursive=False, props={}):
+		cmd = ['zfs', 'snapshot']
+
+		if recursive:
+			cmd.append('-r')
+
+		for prop, value in props.iteritems():
+			cmd.append('-o')
+			cmd.append(prop + '=' + str(value))
+
+		name = self.name + '@' + snapname
+		cmd.append(name)
+
+		log.debug(' '.join(cmd))
+		subprocess.check_call(cmd)
+		return ZFSSnapshot(name)
 
 	# TODO: split force to allow -f, -r and -R to be specified individually
 	def rollback(self, snapname, force=False):
