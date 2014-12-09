@@ -90,8 +90,28 @@ def root_datasets():
 def create(name, type='filesystem', props={}, force=False):
 	raise NotImplementedError()
 
-def receive(name, append=None, force=False, nomount=False):
-	raise NotImplementedError()
+def receive(name, append_name=False, append_path=False,
+		force=False, nomount=False, stdin=None):
+	cmd = ['zfs', 'receive']
+
+	if log.getEffectiveLevel() <= logging.DEBUG:
+		cmd.append('-v')
+
+	if append_name:
+		cmd.append('-e')
+	elif append_path:
+		cmd.append('-d')
+
+	if force:
+		cmd.append('-F')
+	if nomount:
+		cmd.append('-u')
+
+	cmd.append(name)
+
+	# execute command and check result
+	log.debug(' '.join(cmd))
+	subprocess.check_call(cmd, stdin=stdin)
 
 class ZFSDataset(object):
 	def __init__(self, name):
@@ -202,9 +222,32 @@ class ZFSSnapshot(ZFSDataset):
 	def clone(self, name, props={}, force=False):
 		raise NotImplementedError()
 
-	def send(self, from_snapshot=None, intermediates=False,
-			replicate=False, properties=False, deduplicate=False):
-		raise NotImplementedError()
+	def send(self, base=None, intermediates=False, replicate=False,
+			properties=False, deduplicate=False, stdout=None):
+		cmd = ['zfs', 'send']
+
+		if log.getEffectiveLevel() <= logging.DEBUG:
+			cmd.append('-v')
+
+		if replicate:
+			cmd.append('-R')
+		if properties:
+			cmd.append('-p')
+		if deduplicate:
+			cmd.append('-D')
+
+		if base is not None:
+			if intermediates:
+				cmd.append('-I')
+			else:
+				cmd.append('-i')
+			cmd.append(base)
+
+		cmd.append(self.name)
+
+		# execute command and check result
+		log.debug(' '.join(cmd))
+		subprocess.check_call(cmd, stdout=stdout)
 
 	def hold(self, tag, recursive=False):
 		cmd = ['zfs', 'hold']
