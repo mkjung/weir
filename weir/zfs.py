@@ -90,7 +90,7 @@ def root_datasets():
 def create(name, type='filesystem', props={}, force=False):
 	raise NotImplementedError()
 
-def receive(name, append_name=False, append_path=False,
+def receive_async(name, append_name=False, append_path=False,
 		force=False, nomount=False, stdin=None):
 	cmd = ['zfs', 'receive']
 
@@ -111,7 +111,13 @@ def receive(name, append_name=False, append_path=False,
 
 	# execute command and check result
 	log.debug(' '.join(cmd))
-	subprocess.check_call(cmd, stdin=stdin)
+	return subprocess.Popen(cmd, stdin=stdin)
+
+def receive(*args, **kwargs):
+	p = receive_async(*args, **kwargs)
+	retcode = p.wait()
+	if retcode:
+		raise CalledProcessError(retcode, 'zfs receive')
 
 class ZFSDataset(object):
 	def __init__(self, name):
@@ -222,7 +228,7 @@ class ZFSSnapshot(ZFSDataset):
 	def clone(self, name, props={}, force=False):
 		raise NotImplementedError()
 
-	def send(self, base=None, intermediates=False, replicate=False,
+	def send_async(self, base=None, intermediates=False, replicate=False,
 			properties=False, deduplicate=False, stdout=None):
 		cmd = ['zfs', 'send']
 
@@ -247,7 +253,13 @@ class ZFSSnapshot(ZFSDataset):
 
 		# execute command and check result
 		log.debug(' '.join(cmd))
-		subprocess.check_call(cmd, stdout=stdout)
+		return subprocess.Popen(cmd, stdout=stdout)
+
+	def send(self, *args, **kwargs):
+		p = self.send_async(*args, **kwargs)
+		retcode = p.wait()
+		if retcode:
+			raise CalledProcessError(retcode, 'zfs send')
 
 	def hold(self, tag, recursive=False):
 		cmd = ['zfs', 'hold']
