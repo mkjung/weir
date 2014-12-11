@@ -27,5 +27,5 @@ setup(
     ],
     keywords='zfs',
 
-    py_modules=['weir'],
+    packages=['weir'],
 )
