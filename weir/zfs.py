@@ -144,6 +144,10 @@ class ZFSDataset(object):
 	def __str__(self):
 		return self.name
 
+	def parent(self):
+		parent_name, _, _ = self.name.rpartition('/')
+		return open(parent_name) if parent_name else None
+
 	def filesystems(self, recursive=False):
 		depth = None if recursive else 1
 		return find(self.name, depth=depth, types=['filesystem'])[1:]
@@ -270,6 +274,10 @@ class ZFSFilesystem(ZFSDataset):
 		raise NotImplementedError()
 
 class ZFSSnapshot(ZFSDataset):
+	def parent(self):
+		parent_name, _, _ = self.name.rpartition('@')
+		return open(parent_name) if parent_name else None
+
 	# note: force means create missing parent filesystems
 	def clone(self, name, props={}, force=False):
 		raise NotImplementedError()
