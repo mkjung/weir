@@ -213,8 +213,9 @@ class ZFSDataset(object):
 	def getprop(self, prop):
 		return _get([self.name], [prop])[0]
 
-	def getpropval(self, prop):
-		return self.getprop(prop)[2]
+	def getpropval(self, prop, default=None):
+		value = self.getprop(prop)[2]
+		return default if value == '-' else value
 
 	def setprop(self, prop, value):
 		cmd = ['zfs', 'set']
