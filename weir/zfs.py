@@ -1,4 +1,6 @@
+import errno
 import logging
+import re
 import subprocess
 
 log = logging.getLogger(__name__)
@@ -7,6 +9,15 @@ log = logging.getLogger(__name__)
 def check_result(p):
 	out, err = (s.strip() if s else s for s in p.communicate())
 	retcode = p.wait()
+
+	# raise OSError if dataset not found
+	if retcode == 1:
+		match = re.search("^cannot open '([^']+)': dataset does not exist$", err)
+		if match:
+			dataset = match.group(1)
+			raise OSError(errno.ENOENT, err, dataset)
+
+	# raise CalledProcessError for any other error
 	if retcode:
 		raise subprocess.CalledProcessError(retcode, 'zfs', output=err)
 
