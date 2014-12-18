@@ -152,9 +152,13 @@ def receive_async(name, append_name=False, append_path=False,
 
 	cmd.append(name)
 
-	# execute command and check result
+	# zfs receive writes verbose output to stdout, so redirect stderr
+	# to stdout and swap so all logged info goes to stderr as expected
 	log.debug(' '.join(cmd))
-	return subprocess.Popen(cmd, stdin=stdin)
+	p = subprocess.Popen(cmd, stdin=stdin,
+		stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+	p.stdout, p.stderr = None, p.stdout
+	return p
 
 def receive(*args, **kwargs):
 	p = receive_async(*args, **kwargs)
@@ -328,9 +332,8 @@ class ZFSSnapshot(ZFSDataset):
 
 		cmd.append(self.name)
 
-		# execute command and check result
 		log.debug(' '.join(cmd))
-		return subprocess.Popen(cmd, stdout=stdout)
+		return subprocess.Popen(cmd, stdout=stdout, stderr=subprocess.PIPE)
 
 	def send(self, *args, **kwargs):
 		p = self.send_async(*args, **kwargs)
