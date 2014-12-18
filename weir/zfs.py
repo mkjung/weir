@@ -112,7 +112,7 @@ def receive_async(name, append_name=False, append_path=False,
 		force=False, nomount=False, stdin=None):
 	cmd = ['zfs', 'receive']
 
-	if log.getEffectiveLevel() <= logging.DEBUG:
+	if log.getEffectiveLevel() <= logging.INFO:
 		cmd.append('-v')
 
 	if append_name:
@@ -286,7 +286,7 @@ class ZFSSnapshot(ZFSDataset):
 			properties=False, deduplicate=False, stdout=None):
 		cmd = ['zfs', 'send']
 
-		if log.getEffectiveLevel() <= logging.DEBUG:
+		if log.getEffectiveLevel() <= logging.INFO:
 			cmd.append('-v')
 
 		if replicate:
