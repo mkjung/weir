@@ -3,6 +3,31 @@ import subprocess
 
 log = logging.getLogger(__name__)
 
+# Wait for process to complete and check result
+def check_result(p):
+	out, err = (s.strip() if s else s for s in p.communicate())
+	retcode = p.wait()
+	if retcode:
+		raise subprocess.CalledProcessError(retcode, 'zfs', output=err)
+
+	# log verbose output at INFO level
+	if err:
+		for line in err.splitlines():
+			log.info(line)
+
+	return out
+
+# Replacement for subprocess.check_call() that uses check_result()
+def check_call(*popenargs, **kwargs):
+	p = subprocess.Popen(*popenargs, stderr=subprocess.PIPE, **kwargs)
+	check_result(p)
+	return 0
+
+# Replacement for subprocess.check_output() that uses check_result()
+def check_output(*popenargs, **kwargs):
+	PIPE = subprocess.PIPE
+	p = subprocess.Popen(*popenargs, stdout=PIPE, stderr=PIPE, **kwargs)
+	return check_result(p)
 
 # Low level wrapper around zfs get command
 def _get(datasets, props, depth=0, sources=[]):
@@ -27,7 +52,7 @@ def _get(datasets, props, depth=0, sources=[]):
 
 	# execute command, capturing stdout
 	log.debug(' '.join(cmd))
-	out = subprocess.check_output(cmd)
+	out = check_output(cmd)
 
 	# return parsed output as list of (name, property, value, source) tuples
 	return [tuple(line.split('\t')) for line in out.splitlines()]
@@ -55,7 +80,7 @@ def _list(datasets, props, depth=0, types=[]):
 
 	# execute command, capturing stdout
 	log.debug(' '.join(cmd))
-	out = subprocess.check_output(cmd)
+	out = check_output(cmd)
 
 	# return parsed output as list of dicts
 	rows = (line.split('\t') for line in out.splitlines())
@@ -105,7 +130,7 @@ def create(name, type='filesystem', props={}, force=False):
 		cmd.append(name)
 
 		log.debug(' '.join(cmd))
-		subprocess.check_call(cmd)
+		check_call(cmd)
 		return ZFSFilesystem(name)
 
 def receive_async(name, append_name=False, append_path=False,
@@ -133,9 +158,7 @@ def receive_async(name, append_name=False, append_path=False,
 
 def receive(*args, **kwargs):
 	p = receive_async(*args, **kwargs)
-	retcode = p.wait()
-	if retcode:
-		raise CalledProcessError(retcode, 'zfs receive')
+	check_result(p)
 
 class ZFSDataset(object):
 	def __init__(self, name):
@@ -181,7 +204,7 @@ class ZFSDataset(object):
 		cmd.append(self.name)
 
 		log.debug(' '.join(cmd))
-		subprocess.check_call(cmd)
+		check_call(cmd)
 
 	def snapshot(self, snapname, recursive=False, props={}):
 		cmd = ['zfs', 'snapshot']
@@ -197,7 +220,7 @@ class ZFSDataset(object):
 		cmd.append(name)
 
 		log.debug(' '.join(cmd))
-		subprocess.check_call(cmd)
+		check_call(cmd)
 		return ZFSSnapshot(name)
 
 	# TODO: split force to allow -f, -r and -R to be specified individually
@@ -228,7 +251,7 @@ class ZFSDataset(object):
 		cmd.append(self.name)
 
 		log.debug(' '.join(cmd))
-		subprocess.check_call(cmd)
+		check_call(cmd)
 
 	def delprop(self, prop, recursive=False):
 		cmd = ['zfs', 'inherit']
@@ -240,7 +263,7 @@ class ZFSDataset(object):
 		cmd.append(self.name)
 
 		log.debug(' '.join(cmd))
-		subprocess.check_call(cmd)
+		check_call(cmd)
 
 	def userspace(self, *args, **kwargs):
 		raise NotImplementedError()
@@ -311,9 +334,7 @@ class ZFSSnapshot(ZFSDataset):
 
 	def send(self, *args, **kwargs):
 		p = self.send_async(*args, **kwargs)
-		retcode = p.wait()
-		if retcode:
-			raise CalledProcessError(retcode, 'zfs send')
+		check_result(p)
 
 	def hold(self, tag, recursive=False):
 		cmd = ['zfs', 'hold']
@@ -325,7 +346,7 @@ class ZFSSnapshot(ZFSDataset):
 		cmd.append(self.name)
 
 		log.debug(' '.join(cmd))
-		subprocess.check_call(cmd)
+		check_call(cmd)
 
 	def holds(self):
 		cmd = ['zfs', 'holds']
@@ -336,7 +357,7 @@ class ZFSSnapshot(ZFSDataset):
 
 		# execute command, capturing stdout and stderr
 		log.debug(' '.join(cmd))
-		out = subprocess.check_output(cmd)
+		out = check_output(cmd)
 
 		# return parsed output as list of hold tags
 		return [line.split('\t')[1] for line in out.splitlines()]
@@ -351,4 +372,4 @@ class ZFSSnapshot(ZFSDataset):
 		cmd.append(self.name)
 
 		log.debug(' '.join(cmd))
-		subprocess.check_call(cmd)
+		check_call(cmd)
