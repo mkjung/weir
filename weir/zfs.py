@@ -312,6 +312,10 @@ class ZFSFilesystem(ZFSDataset):
 		raise NotImplementedError()
 
 class ZFSSnapshot(ZFSDataset):
+	def snapname(self):
+		_, _, snapname = self.name.rpartition('@')
+		return snapname
+
 	def parent(self):
 		parent_name, _, _ = self.name.rpartition('@')
 		return open(parent_name) if parent_name else None
