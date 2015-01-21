@@ -1,9 +1,57 @@
 import errno
 import logging
+import os
 import re
 import subprocess
+import threading
 
 log = logging.getLogger(__name__)
+
+# Return a readable file object wrapping an iterable
+# Uses os.pipe() to create a real file
+def iteropen(iterable):
+	# Wrapper for file.writelines that closes file and sequence when done
+	def writelines(file, sequence):
+		try:
+			try:
+				file.writelines(sequence)
+			finally:
+				file.close()
+		finally:
+			if hasattr(sequence, 'close'): sequence.close()
+
+	piperead, pipewrite = os.pipe()
+	try:
+		# TODO: should set CLOEXEC on both fds
+		piperead = os.fdopen(piperead, 'rb')
+		pipewrite = os.fdopen(pipewrite, 'wb')
+
+		# copy data in background
+		t = threading.Thread(target=writelines, args=(pipewrite, iterable,))
+		t.daemon = True
+		t.start()
+
+		return piperead
+	except:
+		for f in piperead, pipewrite:
+			try: os.close(f) if isinstance(f, int) else f.close()
+			except: pass
+		raise
+
+# Write stderr of running process directly to log at INFO level
+def log_stderr(p):
+	def lines(stderr):
+		# XXX: try / finally not entered until first value requested
+		# (but unlikely to result in stderr being left open here)
+		try:
+			for line in stderr:
+				if not p.poll():
+					log.info(line.strip())
+				else:
+					yield line
+		finally:
+			stderr.close()
+	p.stderr = iteropen(lines(p.stderr))
 
 # Wait for process to complete and check result
 def check_result(p):
@@ -21,16 +69,12 @@ def check_result(p):
 	if retcode:
 		raise subprocess.CalledProcessError(retcode, 'zfs', output=err)
 
-	# log verbose output at INFO level
-	if err:
-		for line in err.splitlines():
-			log.info(line)
-
 	return out
 
 # Replacement for subprocess.check_call() that uses check_result()
 def check_call(*popenargs, **kwargs):
 	p = subprocess.Popen(*popenargs, stderr=subprocess.PIPE, **kwargs)
+	log_stderr(p)
 	check_result(p)
 	return 0
 
@@ -38,6 +82,7 @@ def check_call(*popenargs, **kwargs):
 def check_output(*popenargs, **kwargs):
 	PIPE = subprocess.PIPE
 	p = subprocess.Popen(*popenargs, stdout=PIPE, stderr=PIPE, **kwargs)
+	log_stderr(p)
 	return check_result(p)
 
 # Low level wrapper around zfs get command
@@ -169,6 +214,7 @@ def receive_async(name, append_name=False, append_path=False,
 	p = subprocess.Popen(cmd, stdin=stdin,
 		stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 	p.stdout, p.stderr = None, p.stdout
+	log_stderr(p)
 	return p
 
 def receive(*args, **kwargs):
@@ -348,7 +394,9 @@ class ZFSSnapshot(ZFSDataset):
 		cmd.append(self.name)
 
 		log.debug(' '.join(cmd))
-		return subprocess.Popen(cmd, stdout=stdout, stderr=subprocess.PIPE)
+		p = subprocess.Popen(cmd, stdout=stdout, stderr=subprocess.PIPE)
+		log_stderr(p)
+		return p
 
 	def send(self, *args, **kwargs):
 		p = self.send_async(*args, **kwargs)
