@@ -7,6 +7,25 @@ import threading
 
 log = logging.getLogger(__name__)
 
+# Subclass of subprocess.Popen that raises an exception instead
+# of returning a non-zero value from poll() or wait().
+class Process(subprocess.Popen):
+	def __init__(self, cmd, **kwargs):
+		super(Process, self).__init__(cmd, **kwargs)
+		self.cmd = cmd
+
+	def check(self):
+		if self.returncode:
+			raise subprocess.CalledProcessError(self.returncode, self.cmd)
+
+	def poll(self):
+		super(Process, self).poll()
+		self.check()
+
+	def wait(self):
+		super(Process, self).wait()
+		self.check()
+
 # Return a readable file object wrapping an iterable
 # Uses os.pipe() to create a real file
 def iteropen(iterable):
@@ -53,37 +72,18 @@ def log_stderr(p):
 			stderr.close()
 	p.stderr = iteropen(lines(p.stderr))
 
-# Wait for process to complete and check result
-def check_result(p):
-	out, err = (s.strip() if s else s for s in p.communicate())
-	retcode = p.wait()
-
-	# raise OSError if dataset not found
-	if retcode == 1:
-		match = re.search("^cannot open '([^']+)': dataset does not exist$", err)
-		if match:
-			dataset = match.group(1)
-			raise OSError(errno.ENOENT, err, dataset)
-
-	# raise CalledProcessError for any other error
-	if retcode:
-		raise subprocess.CalledProcessError(retcode, 'zfs', output=err)
-
-	return out
-
-# Replacement for subprocess.check_call() that uses check_result()
+# Module-specific replacement for subprocess.check_call()
 def check_call(*popenargs, **kwargs):
-	p = subprocess.Popen(*popenargs, stderr=subprocess.PIPE, **kwargs)
+	p = Process(*popenargs, stderr=subprocess.PIPE, **kwargs)
 	log_stderr(p)
-	check_result(p)
-	return 0
+	return p.wait()
 
-# Replacement for subprocess.check_output() that uses check_result()
+# Module-specific replacement for subprocess.check_output()
 def check_output(*popenargs, **kwargs):
 	PIPE = subprocess.PIPE
-	p = subprocess.Popen(*popenargs, stdout=PIPE, stderr=PIPE, **kwargs)
+	p = Process(*popenargs, stdout=PIPE, stderr=PIPE, **kwargs)
 	log_stderr(p)
-	return check_result(p)
+	return p.communicate()[0].strip()
 
 # Low level wrapper around zfs get command
 def _get(datasets, props, depth=0, sources=[]):
@@ -211,7 +211,7 @@ def receive_async(name, append_name=False, append_path=False,
 	# zfs receive writes verbose output to stdout, so redirect stderr
 	# to stdout and swap so all logged info goes to stderr as expected
 	log.debug(' '.join(cmd))
-	p = subprocess.Popen(cmd, stdin=stdin,
+	p = Process(cmd, stdin=stdin,
 		stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 	p.stdout, p.stderr = None, p.stdout
 	log_stderr(p)
@@ -219,7 +219,7 @@ def receive_async(name, append_name=False, append_path=False,
 
 def receive(*args, **kwargs):
 	p = receive_async(*args, **kwargs)
-	check_result(p)
+	p.wait()
 
 class ZFSDataset(object):
 	def __init__(self, name):
@@ -394,13 +394,13 @@ class ZFSSnapshot(ZFSDataset):
 		cmd.append(self.name)
 
 		log.debug(' '.join(cmd))
-		p = subprocess.Popen(cmd, stdout=stdout, stderr=subprocess.PIPE)
+		p = Process(cmd, stdout=stdout, stderr=subprocess.PIPE)
 		log_stderr(p)
 		return p
 
 	def send(self, *args, **kwargs):
 		p = self.send_async(*args, **kwargs)
-		check_result(p)
+		p.wait()
 
 	def hold(self, tag, recursive=False):
 		cmd = ['zfs', 'hold']
