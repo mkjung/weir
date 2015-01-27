@@ -10,9 +10,24 @@ log = logging.getLogger(__name__)
 # Subclass of subprocess.Popen that raises an exception instead
 # of returning a non-zero value from poll() or wait().
 class Process(subprocess.Popen):
-	def __init__(self, cmd, **kwargs):
-		super(Process, self).__init__(cmd, **kwargs)
+	PIPE = subprocess.PIPE      # -1
+	STDOUT = subprocess.STDOUT  # -2
+	STDERR = STDOUT - 1         # -3
+
+	def __init__(self, cmd, stdin=None, stdout=None, stderr=None, **kwargs):
+		# use stderr=STDOUT to combine streams for stdout=STDERR
+		redir_stdout = (stdout == Process.STDERR)
+		if redir_stdout:
+			stdout, stderr = stderr, Process.STDOUT
+
+		# initialise process
+		super(Process, self).__init__(
+			cmd, stdin=stdin, stdout=stdout, stderr=stderr, **kwargs)
 		self.cmd = cmd
+
+		# move output to stderr for stdout=STDERR
+		if redir_stdout:
+			self.stdout, self.stderr = None, self.stdout
 
 	def check(self):
 		if self.returncode:
@@ -74,14 +89,13 @@ def log_stderr(p):
 
 # Module-specific replacement for subprocess.check_call()
 def check_call(*popenargs, **kwargs):
-	p = Process(*popenargs, stderr=subprocess.PIPE, **kwargs)
+	p = Process(*popenargs, stderr=Process.PIPE, **kwargs)
 	log_stderr(p)
 	return p.wait()
 
 # Module-specific replacement for subprocess.check_output()
 def check_output(*popenargs, **kwargs):
-	PIPE = subprocess.PIPE
-	p = Process(*popenargs, stdout=PIPE, stderr=PIPE, **kwargs)
+	p = Process(*popenargs, stdout=Process.PIPE, stderr=Process.PIPE, **kwargs)
 	log_stderr(p)
 	return p.communicate()[0].strip()
 
@@ -208,12 +222,9 @@ def receive_async(name, append_name=False, append_path=False,
 
 	cmd.append(name)
 
-	# zfs receive writes verbose output to stdout, so redirect stderr
-	# to stdout and swap so all logged info goes to stderr as expected
+	# zfs receive writes verbose output to stdout, so redirect to stderr
 	log.debug(' '.join(cmd))
-	p = Process(cmd, stdin=stdin,
-		stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-	p.stdout, p.stderr = None, p.stdout
+	p = Process(cmd, stdin=stdin, stdout=Process.STDERR, stderr=Process.PIPE)
 	log_stderr(p)
 	return p
 
@@ -394,7 +405,7 @@ class ZFSSnapshot(ZFSDataset):
 		cmd.append(self.name)
 
 		log.debug(' '.join(cmd))
-		p = Process(cmd, stdout=stdout, stderr=subprocess.PIPE)
+		p = Process(cmd, stdout=stdout, stderr=Process.PIPE)
 		log_stderr(p)
 		return p
 
