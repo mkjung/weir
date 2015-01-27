@@ -204,7 +204,7 @@ def create(name, type='filesystem', props={}, force=False):
 		return ZFSFilesystem(name)
 
 def receive_async(name, append_name=False, append_path=False,
-		force=False, nomount=False, stdin=None):
+		force=False, nomount=False, file=None):
 	cmd = ['zfs', 'receive']
 
 	if log.getEffectiveLevel() <= logging.INFO:
@@ -224,7 +224,7 @@ def receive_async(name, append_name=False, append_path=False,
 
 	# zfs receive writes verbose output to stdout, so redirect to stderr
 	log.debug(' '.join(cmd))
-	p = Process(cmd, stdin=stdin, stdout=Process.STDERR, stderr=Process.PIPE)
+	p = Process(cmd, stdin=file, stdout=Process.STDERR, stderr=Process.PIPE)
 	log_stderr(p)
 	return p
 
@@ -382,7 +382,7 @@ class ZFSSnapshot(ZFSDataset):
 		raise NotImplementedError()
 
 	def send_async(self, base=None, intermediates=False, replicate=False,
-			properties=False, deduplicate=False, stdout=None):
+			properties=False, deduplicate=False, file=None):
 		cmd = ['zfs', 'send']
 
 		if log.getEffectiveLevel() <= logging.INFO:
@@ -405,7 +405,7 @@ class ZFSSnapshot(ZFSDataset):
 		cmd.append(self.name)
 
 		log.debug(' '.join(cmd))
-		p = Process(cmd, stdout=stdout, stderr=Process.PIPE)
+		p = Process(cmd, stdout=file, stderr=Process.PIPE)
 		log_stderr(p)
 		return p
 
