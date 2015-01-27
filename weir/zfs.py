@@ -44,7 +44,7 @@ def log_stderr(p):
 		# XXX: try / finally not entered until first value requested
 		# (but unlikely to result in stderr being left open here)
 		try:
-			for line in stderr:
+			for line in iter(stderr.readline, ''):
 				if not p.poll():
 					log.info(line.strip())
 				else:
