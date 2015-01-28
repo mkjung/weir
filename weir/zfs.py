@@ -203,7 +203,7 @@ def create(name, type='filesystem', props={}, force=False):
 		check_call(cmd)
 		return ZFSFilesystem(name)
 
-def receive_async(name, append_name=False, append_path=False,
+def receive(name, append_name=False, append_path=False,
 		force=False, nomount=False, file=None):
 	cmd = ['zfs', 'receive']
 
@@ -222,15 +222,15 @@ def receive_async(name, append_name=False, append_path=False,
 
 	cmd.append(name)
 
-	# zfs receive writes verbose output to stdout, so redirect to stderr
+	# create pipe and return process immediately if no input file specified
+	# note: zfs receive writes verbose output to stdout, so redirect to stderr
 	log.debug(' '.join(cmd))
-	p = Process(cmd, stdin=file, stdout=Process.STDERR, stderr=Process.PIPE)
-	log_stderr(p)
-	return p
-
-def receive(*args, **kwargs):
-	p = receive_async(*args, **kwargs)
-	p.wait()
+	if file is None:
+		p = Process(cmd, stdin=Process.PIPE, stdout=Process.STDERR, stderr=Process.PIPE)
+		log_stderr(p)
+		return p
+	else:
+		check_call(cmd, stdin=file, stdout=Process.STDERR)
 
 class ZFSDataset(object):
 	def __init__(self, name):
@@ -381,7 +381,7 @@ class ZFSSnapshot(ZFSDataset):
 	def clone(self, name, props={}, force=False):
 		raise NotImplementedError()
 
-	def send_async(self, base=None, intermediates=False, replicate=False,
+	def send(self, base=None, intermediates=False, replicate=False,
 			properties=False, deduplicate=False, file=None):
 		cmd = ['zfs', 'send']
 
@@ -405,13 +405,14 @@ class ZFSSnapshot(ZFSDataset):
 		cmd.append(self.name)
 
 		log.debug(' '.join(cmd))
-		p = Process(cmd, stdout=file, stderr=Process.PIPE)
-		log_stderr(p)
-		return p
 
-	def send(self, *args, **kwargs):
-		p = self.send_async(*args, **kwargs)
-		p.wait()
+		# create pipe and return process immediately if no output file specified
+		if file is None:
+			p = Process(cmd, stdout=Process.PIPE, stderr=Process.PIPE)
+			log_stderr(p)
+			return p
+		else:
+			check_call(cmd, stdout=file)
 
 	def hold(self, tag, recursive=False):
 		cmd = ['zfs', 'hold']
