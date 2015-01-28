@@ -131,14 +131,14 @@ def log_stderr(p):
 	p.stderr = iteropen(lines(p.stderr))
 
 # Module-specific replacement for subprocess.check_call()
-def check_call(*popenargs, **kwargs):
-	p = Process(*popenargs, stderr=Process.PIPE, **kwargs)
+def check_call(cmd, **kwargs):
+	p = Process(cmd, stderr=Process.PIPE, **kwargs)
 	log_stderr(p)
 	return p.wait()
 
 # Module-specific replacement for subprocess.check_output()
-def check_output(*popenargs, **kwargs):
-	p = Process(*popenargs, stdout=Process.PIPE, stderr=Process.PIPE, **kwargs)
+def check_output(cmd, **kwargs):
+	p = Process(cmd, stdout=Process.PIPE, stderr=Process.PIPE, **kwargs)
 	log_stderr(p)
 	return p.communicate()[0].strip()
 
