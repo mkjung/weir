@@ -147,7 +147,7 @@ def zfs_popen(cmd, **kwargs):
 # Run a zfs command and return its output
 def zfs_output(cmd, **kwargs):
 	with zfs_popen(cmd, stdout=Process.PIPE, **kwargs) as f:
-		return f.read().strip()
+		return [tuple(line.strip().split('\t')) for line in f]
 
 # Low level wrapper around zfs get command
 def _get(datasets, props, depth=0, sources=[]):
@@ -170,11 +170,7 @@ def _get(datasets, props, depth=0, sources=[]):
 
 	cmd.extend(datasets)
 
-	# execute command, capturing stdout
-	out = zfs_output(cmd)
-
-	# return parsed output as list of (name, property, value, source) tuples
-	return [tuple(line.split('\t')) for line in out.splitlines()]
+	return zfs_output(cmd)
 
 # Low level wrapper around zfs list command
 def _list(datasets, props, depth=0, types=[]):
@@ -197,12 +193,8 @@ def _list(datasets, props, depth=0, types=[]):
 
 	cmd.extend(datasets)
 
-	# execute command, capturing stdout
-	out = zfs_output(cmd)
-
 	# return parsed output as list of dicts
-	rows = (line.split('\t') for line in out.splitlines())
-	return [dict(zip(props, row)) for row in rows]
+	return [dict(zip(props, dataset)) for dataset in zfs_output(cmd)]
 
 # Internal factory function to instantiate dataset object
 def _dataset(type, name):
@@ -468,11 +460,8 @@ class ZFSSnapshot(ZFSDataset):
 
 		cmd.append(self.name)
 
-		# execute command, capturing stdout and stderr
-		out = zfs_output(cmd)
-
-		# return parsed output as list of hold tags
-		return [line.split('\t')[1] for line in out.splitlines()]
+		# return hold tag names only
+		return [hold[1] for hold in zfs_output(cmd)]
 
 	def release(self, tag, recursive=False):
 		cmd = ['zfs', 'release']
