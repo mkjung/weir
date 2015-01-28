@@ -136,6 +136,12 @@ def zfs_call(cmd, **kwargs):
 	log_stderr(p)
 	return p.wait()
 
+# Open a pipe to a zfs command
+def zfs_popen(cmd, **kwargs):
+	p = Process(cmd, stderr=Process.PIPE, **kwargs)
+	log_stderr(p)
+	return popen(p)
+
 # Run a zfs command and return its output
 def zfs_output(cmd, **kwargs):
 	p = Process(cmd, stdout=Process.PIPE, stderr=Process.PIPE, **kwargs)
@@ -265,13 +271,11 @@ def receive(name, append_name=False, append_path=False,
 
 	cmd.append(name)
 
-	# create pipe and return process immediately if no input file specified
+	# create and return pipe if no input file specified
 	# note: zfs receive writes verbose output to stdout, so redirect to stderr
 	log.debug(' '.join(cmd))
 	if file is None:
-		p = Process(cmd, stdin=Process.PIPE, stdout=Process.STDERR, stderr=Process.PIPE)
-		log_stderr(p)
-		return popen(p)
+		return zfs_popen(cmd, stdin=Process.PIPE, stdout=Process.STDERR)
 	else:
 		zfs_call(cmd, stdin=file, stdout=Process.STDERR)
 
@@ -449,11 +453,9 @@ class ZFSSnapshot(ZFSDataset):
 
 		log.debug(' '.join(cmd))
 
-		# create pipe and return process immediately if no output file specified
+		# create and return pipe if no output file specified
 		if file is None:
-			p = Process(cmd, stdout=Process.PIPE, stderr=Process.PIPE)
-			log_stderr(p)
-			return popen(p)
+			return zfs_popen(cmd, stdout=Process.PIPE)
 		else:
 			zfs_call(cmd, stdout=file)
 
