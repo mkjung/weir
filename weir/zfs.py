@@ -130,14 +130,14 @@ def log_stderr(p):
 			stderr.close()
 	p.stderr = iteropen(lines(p.stderr))
 
-# Module-specific replacement for subprocess.check_call()
-def check_call(cmd, **kwargs):
+# Run a zfs command and wait for it to complete
+def zfs_call(cmd, **kwargs):
 	p = Process(cmd, stderr=Process.PIPE, **kwargs)
 	log_stderr(p)
 	return p.wait()
 
-# Module-specific replacement for subprocess.check_output()
-def check_output(cmd, **kwargs):
+# Run a zfs command and return its output
+def zfs_output(cmd, **kwargs):
 	p = Process(cmd, stdout=Process.PIPE, stderr=Process.PIPE, **kwargs)
 	log_stderr(p)
 	return p.communicate()[0].strip()
@@ -165,7 +165,7 @@ def _get(datasets, props, depth=0, sources=[]):
 
 	# execute command, capturing stdout
 	log.debug(' '.join(cmd))
-	out = check_output(cmd)
+	out = zfs_output(cmd)
 
 	# return parsed output as list of (name, property, value, source) tuples
 	return [tuple(line.split('\t')) for line in out.splitlines()]
@@ -193,7 +193,7 @@ def _list(datasets, props, depth=0, types=[]):
 
 	# execute command, capturing stdout
 	log.debug(' '.join(cmd))
-	out = check_output(cmd)
+	out = zfs_output(cmd)
 
 	# return parsed output as list of dicts
 	rows = (line.split('\t') for line in out.splitlines())
@@ -243,7 +243,7 @@ def create(name, type='filesystem', props={}, force=False):
 		cmd.append(name)
 
 		log.debug(' '.join(cmd))
-		check_call(cmd)
+		zfs_call(cmd)
 		return ZFSFilesystem(name)
 
 def receive(name, append_name=False, append_path=False,
@@ -273,7 +273,7 @@ def receive(name, append_name=False, append_path=False,
 		log_stderr(p)
 		return popen(p)
 	else:
-		check_call(cmd, stdin=file, stdout=Process.STDERR)
+		zfs_call(cmd, stdin=file, stdout=Process.STDERR)
 
 class ZFSDataset(object):
 	def __init__(self, name):
@@ -319,7 +319,7 @@ class ZFSDataset(object):
 		cmd.append(self.name)
 
 		log.debug(' '.join(cmd))
-		check_call(cmd)
+		zfs_call(cmd)
 
 	def snapshot(self, snapname, recursive=False, props={}):
 		cmd = ['zfs', 'snapshot']
@@ -335,7 +335,7 @@ class ZFSDataset(object):
 		cmd.append(name)
 
 		log.debug(' '.join(cmd))
-		check_call(cmd)
+		zfs_call(cmd)
 		return ZFSSnapshot(name)
 
 	# TODO: split force to allow -f, -r and -R to be specified individually
@@ -366,7 +366,7 @@ class ZFSDataset(object):
 		cmd.append(self.name)
 
 		log.debug(' '.join(cmd))
-		check_call(cmd)
+		zfs_call(cmd)
 
 	def delprop(self, prop, recursive=False):
 		cmd = ['zfs', 'inherit']
@@ -378,7 +378,7 @@ class ZFSDataset(object):
 		cmd.append(self.name)
 
 		log.debug(' '.join(cmd))
-		check_call(cmd)
+		zfs_call(cmd)
 
 	def userspace(self, *args, **kwargs):
 		raise NotImplementedError()
@@ -455,7 +455,7 @@ class ZFSSnapshot(ZFSDataset):
 			log_stderr(p)
 			return popen(p)
 		else:
-			check_call(cmd, stdout=file)
+			zfs_call(cmd, stdout=file)
 
 	def hold(self, tag, recursive=False):
 		cmd = ['zfs', 'hold']
@@ -467,7 +467,7 @@ class ZFSSnapshot(ZFSDataset):
 		cmd.append(self.name)
 
 		log.debug(' '.join(cmd))
-		check_call(cmd)
+		zfs_call(cmd)
 
 	def holds(self):
 		cmd = ['zfs', 'holds']
@@ -478,7 +478,7 @@ class ZFSSnapshot(ZFSDataset):
 
 		# execute command, capturing stdout and stderr
 		log.debug(' '.join(cmd))
-		out = check_output(cmd)
+		out = zfs_output(cmd)
 
 		# return parsed output as list of hold tags
 		return [line.split('\t')[1] for line in out.splitlines()]
@@ -493,4 +493,4 @@ class ZFSSnapshot(ZFSDataset):
 		cmd.append(self.name)
 
 		log.debug(' '.join(cmd))
-		check_call(cmd)
+		zfs_call(cmd)
