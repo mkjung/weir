@@ -131,22 +131,22 @@ def log_stderr(p):
 	p.stderr = iteropen(lines(p.stderr))
 
 # Run a zfs command and wait for it to complete
-def zfs_call(cmd, **kwargs):
+def zfs_call(cmd, stdin=None, stdout=None):
 	log.debug(' '.join(cmd))
-	p = Process(cmd, stderr=Process.PIPE, **kwargs)
+	p = Process(cmd, stdin=stdin, stdout=stdout, stderr=Process.PIPE)
 	log_stderr(p)
 	return p.wait()
 
 # Open a pipe to a zfs command
-def zfs_popen(cmd, **kwargs):
+def zfs_popen(cmd, stdin=None, stdout=None):
 	log.debug(' '.join(cmd))
-	p = Process(cmd, stderr=Process.PIPE, **kwargs)
+	p = Process(cmd, stdin=stdin, stdout=stdout, stderr=Process.PIPE)
 	log_stderr(p)
 	return popen(p)
 
 # Run a zfs command and return its output
-def zfs_output(cmd, **kwargs):
-	with zfs_popen(cmd, stdout=Process.PIPE, **kwargs) as f:
+def zfs_output(cmd):
+	with zfs_popen(cmd, stdout=Process.PIPE) as f:
 		return [tuple(line.strip().split('\t')) for line in f]
 
 # Low level wrapper around zfs get command
