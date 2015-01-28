@@ -144,9 +144,8 @@ def zfs_popen(cmd, **kwargs):
 
 # Run a zfs command and return its output
 def zfs_output(cmd, **kwargs):
-	p = Process(cmd, stdout=Process.PIPE, stderr=Process.PIPE, **kwargs)
-	log_stderr(p)
-	return p.communicate()[0].strip()
+	with zfs_popen(cmd, stdout=Process.PIPE, **kwargs) as f:
+		return f.read().strip()
 
 # Low level wrapper around zfs get command
 def _get(datasets, props, depth=0, sources=[]):
