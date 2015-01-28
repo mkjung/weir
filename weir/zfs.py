@@ -7,6 +7,49 @@ import threading
 
 log = logging.getLogger(__name__)
 
+# Variant of os.popen() that works on an existing process
+def popen(p, mode=None):
+	if mode is None:
+		f = p.stdout or p.stdin
+	elif mode == 'r':
+		f = p.stdout
+	elif mode == 'w':
+		f = p.stdin
+	else:
+		raise ValueError('invalid mode %s' % mode)
+
+	if not f:
+		raise ValueError('process has no pipe for mode %s' % mode)
+
+	return PopenFile(f, p)
+
+# Helper for popen() - wraps file so that it waits for process when closed
+class PopenFile(object):
+	def __init__(self, file, process):
+		self.file = file
+		self.process = process
+
+	def __getattr__(self, name):
+		return getattr(self.file, name)
+
+	def __enter__(self):
+		return self
+
+	def __exit__(self, *exc):
+		self.close()
+
+	def __iter__(self):
+		return self
+
+	def next(self):
+		return self.file.next()
+
+	def close(self):
+		self.file.close()
+		returncode = self.process.wait()
+		if returncode:
+			return returncode
+
 # Subclass of subprocess.Popen that raises an exception instead
 # of returning a non-zero value from poll() or wait().
 class Process(subprocess.Popen):
@@ -228,7 +271,7 @@ def receive(name, append_name=False, append_path=False,
 	if file is None:
 		p = Process(cmd, stdin=Process.PIPE, stdout=Process.STDERR, stderr=Process.PIPE)
 		log_stderr(p)
-		return p
+		return popen(p)
 	else:
 		check_call(cmd, stdin=file, stdout=Process.STDERR)
 
@@ -410,7 +453,7 @@ class ZFSSnapshot(ZFSDataset):
 		if file is None:
 			p = Process(cmd, stdout=Process.PIPE, stderr=Process.PIPE)
 			log_stderr(p)
-			return p
+			return popen(p)
 		else:
 			check_call(cmd, stdout=file)
 
