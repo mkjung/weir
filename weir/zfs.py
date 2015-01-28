@@ -132,12 +132,14 @@ def log_stderr(p):
 
 # Run a zfs command and wait for it to complete
 def zfs_call(cmd, **kwargs):
+	log.debug(' '.join(cmd))
 	p = Process(cmd, stderr=Process.PIPE, **kwargs)
 	log_stderr(p)
 	return p.wait()
 
 # Open a pipe to a zfs command
 def zfs_popen(cmd, **kwargs):
+	log.debug(' '.join(cmd))
 	p = Process(cmd, stderr=Process.PIPE, **kwargs)
 	log_stderr(p)
 	return popen(p)
@@ -169,7 +171,6 @@ def _get(datasets, props, depth=0, sources=[]):
 	cmd.extend(datasets)
 
 	# execute command, capturing stdout
-	log.debug(' '.join(cmd))
 	out = zfs_output(cmd)
 
 	# return parsed output as list of (name, property, value, source) tuples
@@ -197,7 +198,6 @@ def _list(datasets, props, depth=0, types=[]):
 	cmd.extend(datasets)
 
 	# execute command, capturing stdout
-	log.debug(' '.join(cmd))
 	out = zfs_output(cmd)
 
 	# return parsed output as list of dicts
@@ -247,7 +247,6 @@ def create(name, type='filesystem', props={}, force=False):
 
 		cmd.append(name)
 
-		log.debug(' '.join(cmd))
 		zfs_call(cmd)
 		return ZFSFilesystem(name)
 
@@ -272,7 +271,6 @@ def receive(name, append_name=False, append_path=False,
 
 	# create and return pipe if no input file specified
 	# note: zfs receive writes verbose output to stdout, so redirect to stderr
-	log.debug(' '.join(cmd))
 	if file is None:
 		return zfs_popen(cmd, stdin=Process.PIPE, stdout=Process.STDERR)
 	else:
@@ -321,7 +319,6 @@ class ZFSDataset(object):
 
 		cmd.append(self.name)
 
-		log.debug(' '.join(cmd))
 		zfs_call(cmd)
 
 	def snapshot(self, snapname, recursive=False, props={}):
@@ -337,7 +334,6 @@ class ZFSDataset(object):
 		name = self.name + '@' + snapname
 		cmd.append(name)
 
-		log.debug(' '.join(cmd))
 		zfs_call(cmd)
 		return ZFSSnapshot(name)
 
@@ -368,7 +364,6 @@ class ZFSDataset(object):
 		cmd.append(prop + '=' + str(value))
 		cmd.append(self.name)
 
-		log.debug(' '.join(cmd))
 		zfs_call(cmd)
 
 	def delprop(self, prop, recursive=False):
@@ -380,7 +375,6 @@ class ZFSDataset(object):
 		cmd.append(prop)
 		cmd.append(self.name)
 
-		log.debug(' '.join(cmd))
 		zfs_call(cmd)
 
 	def userspace(self, *args, **kwargs):
@@ -450,8 +444,6 @@ class ZFSSnapshot(ZFSDataset):
 
 		cmd.append(self.name)
 
-		log.debug(' '.join(cmd))
-
 		# create and return pipe if no output file specified
 		if file is None:
 			return zfs_popen(cmd, stdout=Process.PIPE)
@@ -467,7 +459,6 @@ class ZFSSnapshot(ZFSDataset):
 		cmd.append(tag)
 		cmd.append(self.name)
 
-		log.debug(' '.join(cmd))
 		zfs_call(cmd)
 
 	def holds(self):
@@ -478,7 +469,6 @@ class ZFSSnapshot(ZFSDataset):
 		cmd.append(self.name)
 
 		# execute command, capturing stdout and stderr
-		log.debug(' '.join(cmd))
 		out = zfs_output(cmd)
 
 		# return parsed output as list of hold tags
@@ -493,5 +483,4 @@ class ZFSSnapshot(ZFSDataset):
 		cmd.append(tag)
 		cmd.append(self.name)
 
-		log.debug(' '.join(cmd))
 		zfs_call(cmd)
