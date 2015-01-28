@@ -130,19 +130,20 @@ def log_stderr(p):
 			stderr.close()
 	p.stderr = iteropen(lines(p.stderr))
 
-# Run a zfs command and wait for it to complete
-def zfs_call(cmd, stdin=None, stdout=None):
+# Start a zfs command
+def zfs_process(cmd, stdin=None, stdout=None):
 	log.debug(' '.join(cmd))
 	p = Process(cmd, stdin=stdin, stdout=stdout, stderr=Process.PIPE)
 	log_stderr(p)
-	return p.wait()
+	return p
+
+# Run a zfs command and wait for it to complete
+def zfs_call(cmd, stdin=None, stdout=None):
+	return zfs_process(cmd, stdin, stdout).wait()
 
 # Open a pipe to a zfs command
 def zfs_popen(cmd, stdin=None, stdout=None):
-	log.debug(' '.join(cmd))
-	p = Process(cmd, stdin=stdin, stdout=stdout, stderr=Process.PIPE)
-	log_stderr(p)
-	return popen(p)
+	return popen(zfs_process(cmd, stdin, stdout))
 
 # Run a zfs command and return its output
 def zfs_output(cmd):
