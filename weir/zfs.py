@@ -95,21 +95,21 @@ def log_stderr(p):
 	t.daemon = True
 	t.start()
 
-# Start a zfs command
-def zfs_process(cmd, stdin=None, stdout=None):
-	# zfs commands don't require setting both stdin and stdout
-	if stdin is not None and stdout is not None:
-		raise ValueError('only one of stdin or stdout may be set')
+class ZFSProcess(Process):
+	def __init__(self, cmd, stdin=None, stdout=None):
+		# zfs commands don't require setting both stdin and stdout
+		if stdin is not None and stdout is not None:
+			raise ValueError('only one of stdin or stdout may be set')
 
-	# commands that accept input such as zfs receive may write
-	# verbose output to stdout - redirect it to stderr
-	if stdin is not None:
-		stdout = Process.STDERR
+		# commands that accept input such as zfs receive may write
+		# verbose output to stdout - redirect it to stderr
+		if stdin is not None:
+			stdout = Process.STDERR
 
-	log.debug(' '.join(cmd))
-	p = Process(cmd, stdin=stdin, stdout=stdout, stderr=Process.PIPE)
-	log_stderr(p)
-	return p
+		log.debug(' '.join(cmd))
+		super(ZFSProcess, self).__init__(
+			cmd, stdin=stdin, stdout=stdout, stderr=Process.PIPE)
+		log_stderr(self)
 
 # Run a zfs command and wait for it to complete
 def zfs_call(cmd, stdin=None, stdout=None):
@@ -117,7 +117,7 @@ def zfs_call(cmd, stdin=None, stdout=None):
 	if stdin == Process.PIPE or stdout == Process.PIPE:
 		raise ValueError('PIPE not allowed when waiting for process')
 
-	return zfs_process(cmd, stdin, stdout).wait()
+	return ZFSProcess(cmd, stdin, stdout).wait()
 
 # Open a pipe to a zfs command
 def zfs_popen(cmd, mode='r'):
@@ -128,7 +128,7 @@ def zfs_popen(cmd, mode='r'):
 	else:
 		raise ValueError('invalid mode %s' % mode)
 
-	return popen(zfs_process(cmd, stdin, stdout), mode)
+	return popen(ZFSProcess(cmd, stdin, stdout), mode)
 
 # Run a zfs command and return its output
 def zfs_output(cmd):
