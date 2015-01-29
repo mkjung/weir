@@ -111,11 +111,11 @@ class ZFSProcess(Process):
 			log_level = logging.DEBUG
 
 		# write stderr to log
-		def log_lines(f):
-			with f:
+		def log_stderr():
+			with self.stderr as f:
 				for line in iter(f.readline, ''):
 					log.log(log_level, line.strip())
-		t = threading.Thread(target=log_lines, args=(self.stderr,))
+		t = threading.Thread(target=log_stderr)
 		t.daemon = True
 		t.start()
 
