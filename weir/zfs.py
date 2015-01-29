@@ -155,12 +155,19 @@ def zfs_call(cmd, stdin=None, stdout=None):
 	return zfs_process(cmd, stdin, stdout).wait()
 
 # Open a pipe to a zfs command
-def zfs_popen(cmd, stdin=None, stdout=None):
-	return popen(zfs_process(cmd, stdin, stdout))
+def zfs_popen(cmd, mode='r'):
+	if mode == 'r':
+		stdin, stdout = None, Process.PIPE
+	elif mode == 'w':
+		stdin, stdout = Process.PIPE, None
+	else:
+		raise ValueError('invalid mode %s' % mode)
+
+	return popen(zfs_process(cmd, stdin, stdout), mode)
 
 # Run a zfs command and return its output
 def zfs_output(cmd):
-	with zfs_popen(cmd, stdout=Process.PIPE) as f:
+	with zfs_popen(cmd, mode='r') as f:
 		return [tuple(line.strip().split('\t')) for line in f]
 
 # Low level wrapper around zfs get command
@@ -277,7 +284,7 @@ def receive(name, append_name=False, append_path=False,
 
 	# create and return pipe if no input file specified
 	if file is None:
-		return zfs_popen(cmd, stdin=Process.PIPE)
+		return zfs_popen(cmd, mode='w')
 	else:
 		zfs_call(cmd, stdin=file)
 
@@ -451,7 +458,7 @@ class ZFSSnapshot(ZFSDataset):
 
 		# create and return pipe if no output file specified
 		if file is None:
-			return zfs_popen(cmd, stdout=Process.PIPE)
+			return zfs_popen(cmd, mode='r')
 		else:
 			zfs_call(cmd, stdout=file)
 
