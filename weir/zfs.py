@@ -88,6 +88,11 @@ class DatasetNotFoundError(OSError):
 		super(DatasetNotFoundError, self).__init__(
 			errno.ENOENT, 'dataset does not exist', dataset)
 
+class DatasetBusyError(OSError):
+	def __init__(self, dataset):
+		super(DatasetBusyError, self).__init__(
+			errno.EBUSY, 'dataset is busy', dataset)
+
 class HoldTagNotFoundError(OSError):
 	def __init__(self, dataset):
 		super(HoldTagNotFoundError, self).__init__(
@@ -151,6 +156,12 @@ class ZFSProcess(Process):
 			match = re.search(pattern, self.err_msg)
 			if match:
 				raise DatasetNotFoundError(match.group(1))
+
+			# check for busy dataset
+			pattern = r"^cannot destroy '([^']+)': dataset is busy$"
+			match = re.search(pattern, self.err_msg)
+			if match:
+				raise DatasetBusyError(match.group(1))
 
 			# check for non-existent hold tag
 			pattern = r"^cannot release '[^']+' from '([^']+)': no such tag on this dataset$"
