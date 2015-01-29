@@ -88,6 +88,11 @@ class DatasetNotFoundError(OSError):
 		super(DatasetNotFoundError, self).__init__(
 			errno.ENOENT, 'dataset does not exist', dataset)
 
+class DatasetExistsError(OSError):
+	def __init__(self, dataset):
+		super(DatasetExistsError, self).__init__(
+			errno.EEXIST, 'dataset already exists', dataset)
+
 class DatasetBusyError(OSError):
 	def __init__(self, dataset):
 		super(DatasetBusyError, self).__init__(
@@ -156,6 +161,12 @@ class ZFSProcess(Process):
 			match = re.search(pattern, self.err_msg)
 			if match:
 				raise DatasetNotFoundError(match.group(1))
+
+			# check for existing dataset
+			pattern = r"^cannot create \w+ '([^']+)': dataset already exists$"
+			match = re.search(pattern, self.err_msg)
+			if match:
+				raise DatasetExistsError(match.group(1))
 
 			# check for busy dataset
 			pattern = r"^cannot destroy '([^']+)': dataset is busy$"
