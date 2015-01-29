@@ -84,51 +84,16 @@ class Process(subprocess.Popen):
 		super(Process, self).wait()
 		self.check()
 
-# Return a readable file object wrapping an iterable
-# Uses os.pipe() to create a real file
-def iteropen(iterable):
-	# Wrapper for file.writelines that closes file and sequence when done
-	def writelines(file, sequence):
-		try:
-			try:
-				file.writelines(sequence)
-			finally:
-				file.close()
-		finally:
-			if hasattr(sequence, 'close'): sequence.close()
-
-	piperead, pipewrite = os.pipe()
-	try:
-		# TODO: should set CLOEXEC on both fds
-		piperead = os.fdopen(piperead, 'rb')
-		pipewrite = os.fdopen(pipewrite, 'wb')
-
-		# copy data in background
-		t = threading.Thread(target=writelines, args=(pipewrite, iterable,))
-		t.daemon = True
-		t.start()
-
-		return piperead
-	except:
-		for f in piperead, pipewrite:
-			try: os.close(f) if isinstance(f, int) else f.close()
-			except: pass
-		raise
-
 # Write stderr of running process directly to log at INFO level
 def log_stderr(p):
-	def lines(stderr):
-		# XXX: try / finally not entered until first value requested
-		# (but unlikely to result in stderr being left open here)
-		try:
-			for line in iter(stderr.readline, ''):
-				if not p.poll():
-					log.info(line.strip())
-				else:
-					yield line
-		finally:
-			stderr.close()
-	p.stderr = iteropen(lines(p.stderr))
+	def log_lines(f):
+		with f:
+			for line in iter(f.readline, ''):
+				log.info(line.strip())
+
+	t = threading.Thread(target=log_lines, args=(p.stderr,))
+	t.daemon = True
+	t.start()
 
 # Start a zfs command
 def zfs_process(cmd, stdin=None, stdout=None):
