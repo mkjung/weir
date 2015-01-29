@@ -1,6 +1,5 @@
 import errno
 import logging
-import os
 import re
 import subprocess
 import threading
@@ -110,14 +109,35 @@ class ZFSProcess(Process):
 			# exception will be generated and it's sufficient to log at DEBUG
 			log_level = logging.DEBUG
 
-		# write stderr to log
+		# write stderr to log and store most recent line for analysis
 		def log_stderr():
 			with self.stderr as f:
 				for line in iter(f.readline, ''):
-					log.log(log_level, line.strip())
+					msg = line.strip()
+					log.log(log_level, msg)
+					self.err_msg = msg
 		t = threading.Thread(target=log_stderr)
 		t.daemon = True
 		t.start()
+		self.err_thread = t
+
+	def check(self):
+		# skip tests if return code is zero or not set yet
+		if not self.returncode:
+			return
+
+		# wait for stderr reader thread to finish
+		self.err_thread.join()
+
+		# raise OSError if dataset not found
+		if self.returncode == 1:
+			pattern = r"^cannot open '([^']+)': dataset does not exist$"
+			match = re.search(pattern, self.err_msg)
+			if match:
+				raise OSError(errno.ENOENT, 'dataset does not exist', match.group(1))
+
+		# unrecognised error - defer to superclass
+		super(ZFSProcess, self).check()
 
 # Run a zfs command and wait for it to complete
 def zfs_call(cmd, stdin=None, stdout=None):
