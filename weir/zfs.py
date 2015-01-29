@@ -83,6 +83,11 @@ class Process(subprocess.Popen):
 		super(Process, self).wait()
 		self.check()
 
+class DatasetNotFoundError(OSError):
+	def __init__(self, dataset):
+		super(DatasetNotFoundError, self).__init__(
+			errno.ENOENT, 'dataset does not exist', dataset)
+
 class ZFSProcess(Process):
 	def __init__(self, cmd, stdin=None, stdout=None):
 		# zfs commands don't require setting both stdin and stdout
@@ -129,12 +134,12 @@ class ZFSProcess(Process):
 		# wait for stderr reader thread to finish
 		self.err_thread.join()
 
-		# raise OSError if dataset not found
+		# check for non-existent dataset
 		if self.returncode == 1:
 			pattern = r"^cannot open '([^']+)': dataset does not exist$"
 			match = re.search(pattern, self.err_msg)
 			if match:
-				raise OSError(errno.ENOENT, 'dataset does not exist', match.group(1))
+				raise DatasetNotFoundError(match.group(1))
 
 		# unrecognised error - defer to superclass
 		super(ZFSProcess, self).check()
