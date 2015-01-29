@@ -84,17 +84,6 @@ class Process(subprocess.Popen):
 		super(Process, self).wait()
 		self.check()
 
-# Write stderr of running process directly to log at INFO level
-def log_stderr(p):
-	def log_lines(f):
-		with f:
-			for line in iter(f.readline, ''):
-				log.info(line.strip())
-
-	t = threading.Thread(target=log_lines, args=(p.stderr,))
-	t.daemon = True
-	t.start()
-
 class ZFSProcess(Process):
 	def __init__(self, cmd, stdin=None, stdout=None):
 		# zfs commands don't require setting both stdin and stdout
@@ -106,10 +95,19 @@ class ZFSProcess(Process):
 		if stdin is not None:
 			stdout = Process.STDERR
 
+		# start process
 		log.debug(' '.join(cmd))
 		super(ZFSProcess, self).__init__(
 			cmd, stdin=stdin, stdout=stdout, stderr=Process.PIPE)
-		log_stderr(self)
+
+		# write stderr to log
+		def log_lines(f):
+			with f:
+				for line in iter(f.readline, ''):
+					log.info(line.strip())
+		t = threading.Thread(target=log_lines, args=(self.stderr,))
+		t.daemon = True
+		t.start()
 
 # Run a zfs command and wait for it to complete
 def zfs_call(cmd, stdin=None, stdout=None):
