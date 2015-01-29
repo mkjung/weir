@@ -100,11 +100,21 @@ class ZFSProcess(Process):
 		super(ZFSProcess, self).__init__(
 			cmd, stdin=stdin, stdout=stdout, stderr=Process.PIPE)
 
+		# set log level
+		if '-v' in cmd:
+			# set log level to INFO for commands that output verbose
+			# info (send, receive, destroy, mount, upgrade)
+			log_level = logging.INFO
+		else:
+			# most commands only write to stderr on failure - in which case an
+			# exception will be generated and it's sufficient to log at DEBUG
+			log_level = logging.DEBUG
+
 		# write stderr to log
 		def log_lines(f):
 			with f:
 				for line in iter(f.readline, ''):
-					log.info(line.strip())
+					log.log(log_level, line.strip())
 		t = threading.Thread(target=log_lines, args=(self.stderr,))
 		t.daemon = True
 		t.start()
