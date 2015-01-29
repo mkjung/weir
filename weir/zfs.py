@@ -148,6 +148,10 @@ def zfs_process(cmd, stdin=None, stdout=None):
 
 # Run a zfs command and wait for it to complete
 def zfs_call(cmd, stdin=None, stdout=None):
+	# don't allow stdin=PIPE or stdout=PIPE since it can deadlock
+	if stdin == Process.PIPE or stdout == Process.PIPE:
+		raise ValueError('PIPE not allowed when waiting for process')
+
 	return zfs_process(cmd, stdin, stdout).wait()
 
 # Open a pipe to a zfs command
