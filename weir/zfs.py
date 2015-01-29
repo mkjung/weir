@@ -88,6 +88,16 @@ class DatasetNotFoundError(OSError):
 		super(DatasetNotFoundError, self).__init__(
 			errno.ENOENT, 'dataset does not exist', dataset)
 
+class HoldTagNotFoundError(OSError):
+	def __init__(self, dataset):
+		super(HoldTagNotFoundError, self).__init__(
+			errno.ENOENT, 'no such tag on this dataset', dataset)
+
+class HoldTagExistsError(OSError):
+	def __init__(self, dataset):
+		super(HoldTagExistsError, self).__init__(
+			errno.EEXIST, 'tag already exists on this dataset', dataset)
+
 class ZFSProcess(Process):
 	def __init__(self, cmd, stdin=None, stdout=None):
 		# zfs commands don't require setting both stdin and stdout
@@ -134,12 +144,25 @@ class ZFSProcess(Process):
 		# wait for stderr reader thread to finish
 		self.err_thread.join()
 
-		# check for non-existent dataset
+		# check for known errors
 		if self.returncode == 1:
+			# check for non-existent dataset
 			pattern = r"^cannot open '([^']+)': dataset does not exist$"
 			match = re.search(pattern, self.err_msg)
 			if match:
 				raise DatasetNotFoundError(match.group(1))
+
+			# check for non-existent hold tag
+			pattern = r"^cannot release '[^']+' from '([^']+)': no such tag on this dataset$"
+			match = re.search(pattern, self.err_msg)
+			if match:
+				raise HoldTagNotFoundError(match.group(1))
+
+			# check for existing hold tag
+			pattern = r"^cannot hold '([^']+)': tag already exists on this dataset$"
+			match = re.search(pattern, self.err_msg)
+			if match:
+				raise HoldTagExistsError(match.group(1))
 
 		# unrecognised error - defer to superclass
 		super(ZFSProcess, self).check()
