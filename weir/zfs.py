@@ -132,6 +132,15 @@ def log_stderr(p):
 
 # Start a zfs command
 def zfs_process(cmd, stdin=None, stdout=None):
+	# zfs commands don't require setting both stdin and stdout
+	if stdin is not None and stdout is not None:
+		raise ValueError('only one of stdin or stdout may be set')
+
+	# commands that accept input such as zfs receive may write
+	# verbose output to stdout - redirect it to stderr
+	if stdin is not None:
+		stdout = Process.STDERR
+
 	log.debug(' '.join(cmd))
 	p = Process(cmd, stdin=stdin, stdout=stdout, stderr=Process.PIPE)
 	log_stderr(p)
@@ -263,11 +272,10 @@ def receive(name, append_name=False, append_path=False,
 	cmd.append(name)
 
 	# create and return pipe if no input file specified
-	# note: zfs receive writes verbose output to stdout, so redirect to stderr
 	if file is None:
-		return zfs_popen(cmd, stdin=Process.PIPE, stdout=Process.STDERR)
+		return zfs_popen(cmd, stdin=Process.PIPE)
 	else:
-		zfs_call(cmd, stdin=file, stdout=Process.STDERR)
+		zfs_call(cmd, stdin=file)
 
 class ZFSDataset(object):
 	def __init__(self, name):
