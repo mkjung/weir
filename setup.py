@@ -23,6 +23,7 @@ setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved',
         'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
     ],
     keywords='zfs',

@@ -16,7 +16,7 @@ for remote operation will be the focus for Weir 0.3.0.
 
 Installation
 ------------
-Requires Python 2.7.
+Requires Python 2.6 or 2.7.
 
 To install Weir, simply:
 
