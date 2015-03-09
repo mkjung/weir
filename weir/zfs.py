@@ -138,7 +138,8 @@ class ZFSProcess(Process):
 		# write stderr to log and store most recent line for analysis
 		def log_stderr():
 			with stderr as f:
-				for line in iter(f.readline, ''):
+				# XXX: should open file in text mode instead of decoding chunks
+				for line in iter(lambda: f.readline().decode(), ''):
 					msg = line.strip()
 					log.log(log_level, msg)
 					self.err_msg = msg
@@ -200,9 +201,9 @@ def zfs_call(cmd, stdin=None, stdout=None):
 
 # Open a pipe to a zfs command
 def zfs_popen(cmd, mode='r'):
-	if mode == 'r':
+	if mode == 'rb':
 		stdin, stdout = None, Process.PIPE
-	elif mode == 'w':
+	elif mode == 'wb':
 		stdin, stdout = Process.PIPE, None
 	else:
 		raise ValueError('invalid mode %s' % mode)
@@ -211,8 +212,9 @@ def zfs_popen(cmd, mode='r'):
 
 # Run a zfs command and return its output
 def zfs_output(cmd):
-	with zfs_popen(cmd, mode='r') as f:
-		return [tuple(line.strip().split('\t')) for line in f]
+	# XXX: should open file in text mode instead of decoding chunks
+	with zfs_popen(cmd, mode='rb') as f:
+		return [tuple(line.decode().strip().split('\t')) for line in f]
 
 # Low level wrapper around zfs get command
 def _get(datasets, props, depth=0, sources=[]):
@@ -328,7 +330,7 @@ def receive(name, append_name=False, append_path=False,
 
 	# create and return pipe if no input file specified
 	if file is None:
-		return zfs_popen(cmd, mode='w')
+		return zfs_popen(cmd, mode='wb')
 	else:
 		zfs_call(cmd, stdin=file)
 
@@ -502,7 +504,7 @@ class ZFSSnapshot(ZFSDataset):
 
 		# create and return pipe if no output file specified
 		if file is None:
-			return zfs_popen(cmd, mode='r')
+			return zfs_popen(cmd, mode='rb')
 		else:
 			zfs_call(cmd, stdout=file)
 
