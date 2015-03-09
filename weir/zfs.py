@@ -7,19 +7,17 @@ import threading
 log = logging.getLogger(__name__)
 
 # Variant of os.popen() that works on an existing process
-def popen(p, mode=None):
-	if mode is None:
-		f = p.stdout or p.stdin
-	elif mode == 'r':
-		f = p.stdout
-	elif mode == 'w':
-		f = p.stdin
-	else:
-		raise ValueError('invalid mode %s' % mode)
+def popen(p):
+	# get open files
+	stdin, stdout, stderr = (None if (f is None or f.closed) else f
+		for f in (p.stdin, p.stdout, p.stderr))
 
-	if not f:
-		raise ValueError('process has no pipe for mode %s' % mode)
+	# choose file to return
+	f = stdin or stdout
+	if (not f) or (stdin and stdout) or stderr:
+		raise ValueError('exactly one of stdin, stdout must be open')
 
+	# wrap file to wait for process on close
 	return PopenFile(f, p)
 
 # Helper for popen() - wraps file so that it waits for process when closed
@@ -124,6 +122,9 @@ class ZFSProcess(Process):
 		super(ZFSProcess, self).__init__(
 			cmd, stdin=stdin, stdout=stdout, stderr=Process.PIPE)
 
+		# hide stderr, it is handled internally
+		stderr, self.stderr = self.stderr, None
+
 		# set log level
 		if '-v' in cmd:
 			# set log level to INFO for commands that output verbose
@@ -136,7 +137,7 @@ class ZFSProcess(Process):
 
 		# write stderr to log and store most recent line for analysis
 		def log_stderr():
-			with self.stderr as f:
+			with stderr as f:
 				for line in iter(f.readline, ''):
 					msg = line.strip()
 					log.log(log_level, msg)
@@ -206,7 +207,7 @@ def zfs_popen(cmd, mode='r'):
 	else:
 		raise ValueError('invalid mode %s' % mode)
 
-	return popen(ZFSProcess(cmd, stdin, stdout), mode)
+	return popen(ZFSProcess(cmd, stdin, stdout))
 
 # Run a zfs command and return its output
 def zfs_output(cmd):
