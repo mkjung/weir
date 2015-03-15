@@ -150,8 +150,8 @@ class ZFSProcess(Process):
 		super(ZFSProcess, self).__init__(
 			cmd, stdin=stdin, stdout=stdout, stderr=Process.PIPE)
 
-		# hide stderr, it is handled internally
-		stderr, self.stderr = self.stderr, None
+		# wrap stderr for text io and set aside for logging
+		stderr, self.stderr = io.TextIOWrapper(self.stderr), None
 
 		# set log level
 		if '-v' in cmd:
@@ -166,8 +166,7 @@ class ZFSProcess(Process):
 		# write stderr to log and store most recent line for analysis
 		def log_stderr():
 			with stderr as f:
-				# XXX: should open file in text mode instead of decoding chunks
-				for line in iter(lambda: f.readline().decode(), ''):
+				for line in iter(f.readline, ''):
 					msg = line.strip()
 					log.log(log_level, msg)
 					self.err_msg = msg
