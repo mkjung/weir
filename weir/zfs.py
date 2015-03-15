@@ -38,8 +38,10 @@ class PopenFile(object):
 	def __iter__(self):
 		return self
 
-	def next(self):
-		return self.file.next()
+	def __next__(self):
+		return next(self.file)
+
+	next = __next__
 
 	def close(self):
 		self.file.close()
@@ -52,6 +54,7 @@ class PopenFile(object):
 class Process(subprocess.Popen):
 	PIPE = subprocess.PIPE      # -1
 	STDOUT = subprocess.STDOUT  # -2
+	# XXX: this is used for DEVNULL in Python 3
 	STDERR = STDOUT - 1         # -3
 
 	def __init__(self, cmd, stdin=None, stdout=None, stderr=None, **kwargs):
@@ -300,7 +303,7 @@ def create(name, type='filesystem', props={}, force=False):
 		if force:
 			cmd.append('-p')
 
-		for prop, value in props.iteritems():
+		for prop, value in props.items():
 			cmd.append('-o')
 			cmd.append(prop + '=' + str(value))
 
@@ -385,7 +388,7 @@ class ZFSDataset(object):
 		if recursive:
 			cmd.append('-r')
 
-		for prop, value in props.iteritems():
+		for prop, value in props.items():
 			cmd.append('-o')
 			cmd.append(prop + '=' + str(value))
 
