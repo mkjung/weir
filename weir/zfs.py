@@ -228,20 +228,24 @@ def zfs_call(cmd, stdin=None, stdout=None):
 
 # Open a pipe to a zfs command
 def zfs_popen(cmd, mode='r'):
-	if mode == 'rb':
+	if mode in ('r', 'rt', 'rb'):
 		stdin, stdout = None, Process.PIPE
-	elif mode == 'wb':
+	elif mode in ('w', 'wt', 'wb'):
 		stdin, stdout = Process.PIPE, None
 	else:
 		raise ValueError('invalid mode %s' % mode)
 
-	return popen(ZFSProcess(cmd, stdin, stdout))
+	f = popen(ZFSProcess(cmd, stdin, stdout))
+
+	if mode[-1] != 'b':
+		f = io.TextIOWrapper(f)
+
+	return f
 
 # Run a zfs command and return its output
 def zfs_output(cmd):
-	# XXX: should open file in text mode instead of decoding chunks
-	with zfs_popen(cmd, mode='rb') as f:
-		return [tuple(line.decode().strip().split('\t')) for line in f]
+	with zfs_popen(cmd, mode='rt') as f:
+		return [tuple(line.strip().split('\t')) for line in f]
 
 # Low level wrapper around zfs get command
 def _get(datasets, props, depth=0, sources=[]):
