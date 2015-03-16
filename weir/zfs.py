@@ -60,10 +60,13 @@ class PopenFile(object):
 # Subclass of subprocess.Popen that raises an exception instead
 # of returning a non-zero value from poll() or wait().
 class Process(subprocess.Popen):
-	PIPE = subprocess.PIPE      # -1
-	STDOUT = subprocess.STDOUT  # -2
-	# XXX: this is used for DEVNULL in Python 3
-	STDERR = STDOUT - 1         # -3
+	try:
+		DEVNULL = subprocess.DEVNULL  # -3
+	except AttributeError:
+		pass
+	PIPE = subprocess.PIPE            # -1
+	STDOUT = subprocess.STDOUT        # -2
+	STDERR = -4
 
 	def __init__(self, cmd, stdin=None, stdout=None, stderr=None,
 			bufsize=-1, universal_newlines=False, **kwargs):
