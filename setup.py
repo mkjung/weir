@@ -8,7 +8,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='weir',
-    version='0.2.1',
+    version='0.3.0.dev',
     description='A Python API for ZFS',
     long_description=long_description,
 
