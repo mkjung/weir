@@ -48,12 +48,14 @@ class ZFSProcess(superprocess.Popen):
 
 		# start process
 		log.debug(' '.join(cmd))
-		super(ZFSProcess, self).__init__(
-			cmd, bufsize=bufsize, stdin=stdin, stdout=stdout,
-			stderr=superprocess.PIPE, fail_on_error=True)
+		super(ZFSProcess, self).__init__(cmd, bufsize=bufsize,
+			stdin=stdin, stdout=stdout, stderr=superprocess.PIPE,
+			universal_newlines=universal_newlines, fail_on_error=True)
 
-		# wrap stderr for text io and set aside for logging
-		stderr, self.stderr = io.TextIOWrapper(self.stderr), None
+		# set stderr aside for logging and ensure it is a text stream
+		stderr, self.stderr = self.stderr, None
+		if not universal_newlines:
+			stderr = io.TextIOWrapper(stderr)
 
 		# set log level
 		if '-v' in cmd:
@@ -130,12 +132,7 @@ def zfs_call(cmd, stdin=None, stdout=None):
 
 # Open a pipe to a zfs command
 def zfs_popen(cmd, mode='r'):
-	f = ZFSProcess.popen(cmd, mode)
-
-	if mode[-1] != 'b':
-		f = io.TextIOWrapper(f)
-
-	return f
+	return ZFSProcess.popen(cmd, mode)
 
 # Run a zfs command and return its output
 def zfs_output(cmd):
