@@ -3,114 +3,11 @@ import io
 import logging
 import os
 import re
-import subprocess
 import threading
 
+import superprocess
+
 log = logging.getLogger(__name__)
-
-# Reopen file with new mode, buffer size etc using io module
-def reopen(file, *args, **kwargs):
-	fd = os.dup(file.fileno())
-	file.close()
-	return io.open(fd, *args, **kwargs)
-
-# Variant of os.popen() that works on an existing process
-def popen(p):
-	# get open files
-	stdin, stdout, stderr = (None if (f is None or f.closed) else f
-		for f in (p.stdin, p.stdout, p.stderr))
-
-	# choose file to return
-	f = stdin or stdout
-	if (not f) or (stdin and stdout) or stderr:
-		raise ValueError('exactly one of stdin, stdout must be open')
-
-	# wrap file to wait for process on close
-	return PopenFile(f, p)
-
-# Helper for popen() - wraps file so that it waits for process when closed
-class PopenFile(object):
-	def __init__(self, file, process):
-		self.file = file
-		self.process = process
-
-	def __getattr__(self, name):
-		return getattr(self.file, name)
-
-	def __enter__(self):
-		return self
-
-	def __exit__(self, *exc):
-		self.close()
-
-	def __iter__(self):
-		return self
-
-	def __next__(self):
-		return next(self.file)
-
-	next = __next__
-
-	def close(self):
-		self.file.close()
-		returncode = self.process.wait()
-		if returncode:
-			return returncode
-
-# Subclass of subprocess.Popen that raises an exception instead
-# of returning a non-zero value from poll() or wait().
-class Process(subprocess.Popen):
-	try:
-		DEVNULL = subprocess.DEVNULL  # -3
-	except AttributeError:
-		pass
-	PIPE = subprocess.PIPE            # -1
-	STDOUT = subprocess.STDOUT        # -2
-	STDERR = -4
-
-	def __init__(self, cmd, stdin=None, stdout=None, stderr=None,
-			bufsize=-1, universal_newlines=False, **kwargs):
-		# use stderr=STDOUT to combine streams for stdout=STDERR
-		redir_stdout = (stdout == Process.STDERR)
-		if redir_stdout:
-			stdout, stderr = stderr, Process.STDOUT
-
-		# initialise process
-		super(Process, self).__init__(
-			cmd, stdin=stdin, stdout=stdout, stderr=stderr,
-			bufsize=bufsize, universal_newlines=universal_newlines, **kwargs)
-		self.cmd = cmd
-
-		# move output to stderr for stdout=STDERR
-		if redir_stdout:
-			self.stdout, self.stderr = None, self.stdout
-
-		# reopen standard streams for consistency between Python 2 & 3
-		if self.stdin and not isinstance(self.stdin, io.IOBase):
-			self.stdin = reopen(self.stdin, 'wb', bufsize)
-			if universal_newlines:
-				self.stdin = io.TextIOWrapper(self.stdin,
-					write_through=True, line_buffering=(bufsize == 1))
-		if self.stdout and not isinstance(self.stdout, io.IOBase):
-			self.stdout = reopen(self.stdout, 'rb', bufsize)
-			if universal_newlines:
-				self.stdout = io.TextIOWrapper(self.stdout)
-		if self.stderr and not isinstance(self.stderr, io.IOBase):
-			self.stderr = reopen(self.stderr, 'rb', bufsize)
-			if universal_newlines:
-				self.stderr = io.TextIOWrapper(self.stderr)
-
-	def check(self):
-		if self.returncode:
-			raise subprocess.CalledProcessError(self.returncode, self.cmd)
-
-	def poll(self):
-		super(Process, self).poll()
-		self.check()
-
-	def wait(self):
-		super(Process, self).wait()
-		self.check()
 
 class DatasetNotFoundError(OSError):
 	def __init__(self, dataset):
@@ -137,8 +34,9 @@ class HoldTagExistsError(OSError):
 		super(HoldTagExistsError, self).__init__(
 			errno.EEXIST, 'tag already exists on this dataset', dataset)
 
-class ZFSProcess(Process):
-	def __init__(self, cmd, stdin=None, stdout=None):
+class ZFSProcess(superprocess.Popen):
+	def __init__(self, cmd, bufsize=-1,
+			stdin=None, stdout=None, universal_newlines=False):
 		# zfs commands don't require setting both stdin and stdout
 		if stdin is not None and stdout is not None:
 			raise ValueError('only one of stdin or stdout may be set')
@@ -146,12 +44,13 @@ class ZFSProcess(Process):
 		# commands that accept input such as zfs receive may write
 		# verbose output to stdout - redirect it to stderr
 		if stdin is not None:
-			stdout = Process.STDERR
+			stdout = superprocess.STDERR
 
 		# start process
 		log.debug(' '.join(cmd))
 		super(ZFSProcess, self).__init__(
-			cmd, stdin=stdin, stdout=stdout, stderr=Process.PIPE)
+			cmd, bufsize=bufsize, stdin=stdin, stdout=stdout,
+			stderr=superprocess.PIPE, fail_on_error=True)
 
 		# wrap stderr for text io and set aside for logging
 		stderr, self.stderr = io.TextIOWrapper(self.stderr), None
@@ -224,21 +123,14 @@ class ZFSProcess(Process):
 # Run a zfs command and wait for it to complete
 def zfs_call(cmd, stdin=None, stdout=None):
 	# don't allow stdin=PIPE or stdout=PIPE since it can deadlock
-	if stdin == Process.PIPE or stdout == Process.PIPE:
+	if stdin == superprocess.PIPE or stdout == superprocess.PIPE:
 		raise ValueError('PIPE not allowed when waiting for process')
 
-	return ZFSProcess(cmd, stdin, stdout).wait()
+	return ZFSProcess.call(cmd, stdin=stdin, stdout=stdout)
 
 # Open a pipe to a zfs command
 def zfs_popen(cmd, mode='r'):
-	if mode in ('r', 'rt', 'rb'):
-		stdin, stdout = None, Process.PIPE
-	elif mode in ('w', 'wt', 'wb'):
-		stdin, stdout = Process.PIPE, None
-	else:
-		raise ValueError('invalid mode %s' % mode)
-
-	f = popen(ZFSProcess(cmd, stdin, stdout))
+	f = ZFSProcess.popen(cmd, mode)
 
 	if mode[-1] != 'b':
 		f = io.TextIOWrapper(f)

@@ -31,4 +31,8 @@ setup(
     keywords='zfs',
 
     packages=['weir'],
+
+    install_requires=[
+        'superprocess==0.1.0.dev',
+    ],
 )
