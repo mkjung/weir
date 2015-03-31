@@ -35,6 +35,11 @@ class HoldTagExistsError(OSError):
 			errno.EEXIST, 'tag already exists on this dataset', dataset)
 
 class ZFSProcess(superprocess.Popen):
+	@classmethod
+	def check_output(Popen, cmd):
+		with Popen.popen(cmd, mode='rt') as f:
+			return [tuple(line.strip().split('\t')) for line in f]
+
 	def __init__(self, cmd, bufsize=-1,
 			stdin=None, stdout=None, universal_newlines=False):
 		# zfs commands don't require setting both stdin and stdout
@@ -132,8 +137,7 @@ def zfs_popen(cmd, mode='r'):
 
 # Run a zfs command and return its output
 def zfs_output(cmd):
-	with zfs_popen(cmd, mode='rt') as f:
-		return [tuple(line.strip().split('\t')) for line in f]
+	return ZFSProcess.check_output(cmd)
 
 # Low level wrapper around zfs get command
 def _get(datasets, props, depth=0, sources=[]):
