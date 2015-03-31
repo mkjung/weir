@@ -1,20 +1,8 @@
 import logging
 
-from weir.process import ZFSProcess
+from weir import process
 
 log = logging.getLogger(__name__)
-
-# Run a zfs command and wait for it to complete
-def zfs_call(cmd, stdin=None, stdout=None):
-	return ZFSProcess.call(cmd, stdin=stdin, stdout=stdout)
-
-# Open a pipe to a zfs command
-def zfs_popen(cmd, mode='r'):
-	return ZFSProcess.popen(cmd, mode)
-
-# Run a zfs command and return its output
-def zfs_output(cmd):
-	return ZFSProcess.check_output(cmd)
 
 # Low level wrapper around zfs get command
 def _get(datasets, props, depth=0, sources=[]):
@@ -37,7 +25,7 @@ def _get(datasets, props, depth=0, sources=[]):
 
 	cmd.extend(datasets)
 
-	return zfs_output(cmd)
+	return process.check_output(cmd)
 
 # Low level wrapper around zfs list command
 def _list(datasets, props, depth=0, types=[]):
@@ -61,7 +49,8 @@ def _list(datasets, props, depth=0, types=[]):
 	cmd.extend(datasets)
 
 	# return parsed output as list of dicts
-	return [dict(zip(props, dataset)) for dataset in zfs_output(cmd)]
+	return [dict(zip(props, dataset))
+		for dataset in process.check_output(cmd)]
 
 # Internal factory function to instantiate dataset object
 def _dataset(type, name):
@@ -106,7 +95,7 @@ def create(name, type='filesystem', props={}, force=False):
 
 		cmd.append(name)
 
-		zfs_call(cmd)
+		process.call(cmd)
 		return ZFSFilesystem(name)
 
 def receive(name, append_name=False, append_path=False,
@@ -130,9 +119,9 @@ def receive(name, append_name=False, append_path=False,
 
 	# create and return pipe if no input file specified
 	if file is None:
-		return zfs_popen(cmd, mode='wb')
+		return process.popen(cmd, mode='wb')
 	else:
-		zfs_call(cmd, stdin=file)
+		process.call(cmd, stdin=file)
 
 class ZFSDataset(object):
 	def __init__(self, name):
@@ -177,7 +166,7 @@ class ZFSDataset(object):
 
 		cmd.append(self.name)
 
-		zfs_call(cmd)
+		process.call(cmd)
 
 	def snapshot(self, snapname, recursive=False, props={}):
 		cmd = ['zfs', 'snapshot']
@@ -192,7 +181,7 @@ class ZFSDataset(object):
 		name = self.name + '@' + snapname
 		cmd.append(name)
 
-		zfs_call(cmd)
+		process.call(cmd)
 		return ZFSSnapshot(name)
 
 	# TODO: split force to allow -f, -r and -R to be specified individually
@@ -222,7 +211,7 @@ class ZFSDataset(object):
 		cmd.append(prop + '=' + str(value))
 		cmd.append(self.name)
 
-		zfs_call(cmd)
+		process.call(cmd)
 
 	def delprop(self, prop, recursive=False):
 		cmd = ['zfs', 'inherit']
@@ -233,7 +222,7 @@ class ZFSDataset(object):
 		cmd.append(prop)
 		cmd.append(self.name)
 
-		zfs_call(cmd)
+		process.call(cmd)
 
 	def userspace(self, *args, **kwargs):
 		raise NotImplementedError()
@@ -304,9 +293,9 @@ class ZFSSnapshot(ZFSDataset):
 
 		# create and return pipe if no output file specified
 		if file is None:
-			return zfs_popen(cmd, mode='rb')
+			return process.popen(cmd, mode='rb')
 		else:
-			zfs_call(cmd, stdout=file)
+			process.call(cmd, stdout=file)
 
 	def hold(self, tag, recursive=False):
 		cmd = ['zfs', 'hold']
@@ -317,7 +306,7 @@ class ZFSSnapshot(ZFSDataset):
 		cmd.append(tag)
 		cmd.append(self.name)
 
-		zfs_call(cmd)
+		process.call(cmd)
 
 	def holds(self):
 		cmd = ['zfs', 'holds']
@@ -327,7 +316,7 @@ class ZFSSnapshot(ZFSDataset):
 		cmd.append(self.name)
 
 		# return hold tag names only
-		return [hold[1] for hold in zfs_output(cmd)]
+		return [hold[1] for hold in process.check_output(cmd)]
 
 	def release(self, tag, recursive=False):
 		cmd = ['zfs', 'release']
@@ -338,4 +327,4 @@ class ZFSSnapshot(ZFSDataset):
 		cmd.append(tag)
 		cmd.append(self.name)
 
-		zfs_call(cmd)
+		process.call(cmd)

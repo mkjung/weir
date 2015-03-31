@@ -8,6 +8,11 @@ import superprocess
 
 log = logging.getLogger(__name__)
 
+PIPE = superprocess.PIPE
+STDOUT = superprocess.PIPE
+STDERR = superprocess.STDERR
+CalledProcessError = superprocess.CalledProcessError
+
 class DatasetNotFoundError(OSError):
 	def __init__(self, dataset):
 		super(DatasetNotFoundError, self).__init__(
@@ -33,7 +38,7 @@ class HoldTagExistsError(OSError):
 		super(HoldTagExistsError, self).__init__(
 			errno.EEXIST, 'tag already exists on this dataset', dataset)
 
-class ZFSProcess(superprocess.Popen):
+class Popen(superprocess.Popen):
 	@classmethod
 	def check_output(Popen, cmd):
 		with Popen.popen(cmd, mode='rt') as f:
@@ -48,12 +53,12 @@ class ZFSProcess(superprocess.Popen):
 		# commands that accept input such as zfs receive may write
 		# verbose output to stdout - redirect it to stderr
 		if stdin is not None:
-			stdout = superprocess.STDERR
+			stdout = STDERR
 
 		# start process
 		log.debug(' '.join(cmd))
-		super(ZFSProcess, self).__init__(cmd, bufsize=bufsize,
-			stdin=stdin, stdout=stdout, stderr=superprocess.PIPE,
+		super(Popen, self).__init__(cmd, bufsize=bufsize,
+			stdin=stdin, stdout=stdout, stderr=PIPE,
 			universal_newlines=universal_newlines, fail_on_error=True)
 
 		# set stderr aside for logging and ensure it is a text stream
@@ -124,4 +129,9 @@ class ZFSProcess(superprocess.Popen):
 				raise HoldTagExistsError(match.group(1))
 
 		# unrecognised error - defer to superclass
-		super(ZFSProcess, self).check()
+		super(Popen, self).check()
+
+call = Popen.call
+check_call = Popen.check_call
+check_output = Popen.check_output
+popen = Popen.popen
