@@ -124,10 +124,6 @@ class ZFSProcess(superprocess.Popen):
 
 # Run a zfs command and wait for it to complete
 def zfs_call(cmd, stdin=None, stdout=None):
-	# don't allow stdin=PIPE or stdout=PIPE since it can deadlock
-	if stdin == superprocess.PIPE or stdout == superprocess.PIPE:
-		raise ValueError('PIPE not allowed when waiting for process')
-
 	return ZFSProcess.call(cmd, stdin=stdin, stdout=stdout)
 
 # Open a pipe to a zfs command
