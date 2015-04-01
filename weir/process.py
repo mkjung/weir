@@ -69,7 +69,7 @@ class Popen(superprocess.Popen):
 
 		# set stderr aside for logging and ensure it is a text stream
 		stderr, self.stderr = self.stderr, None
-		if not kwargs.get('universal_newlines', False):
+		if not isinstance(stderr, io.TextIOBase):
 			stderr = io.TextIOWrapper(stderr)
 
 		# set log level
