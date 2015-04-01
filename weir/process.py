@@ -40,12 +40,14 @@ class HoldTagExistsError(OSError):
 
 class Popen(superprocess.Popen):
 	@classmethod
-	def check_output(Popen, cmd):
-		with Popen.popen(cmd, mode='rt') as f:
-			return [tuple(line.strip().split('\t')) for line in f]
+	def check_output(cls, cmd):
+		output = super(Popen, cls).check_output(
+			cmd, universal_newlines=True)
+
+		return [tuple(line.split('\t')) for line in output.splitlines()]
 
 	def __init__(self, cmd, bufsize=-1,
-			stdin=None, stdout=None, universal_newlines=False):
+			stdin=None, stdout=None, universal_newlines=False, fail_on_error=True):
 		# zfs commands don't require setting both stdin and stdout
 		if stdin is not None and stdout is not None:
 			raise ValueError('only one of stdin or stdout may be set')
