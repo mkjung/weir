@@ -40,15 +40,16 @@ class HoldTagExistsError(OSError):
 
 class Popen(superprocess.Popen):
 	@classmethod
-	def check_output(cls, cmd):
+	def check_output(cls, cmd, **kwargs):
 		output = super(Popen, cls).check_output(
-			cmd, universal_newlines=True)
+			cmd, universal_newlines=True, **kwargs)
 
 		return [tuple(line.split('\t')) for line in output.splitlines()]
 
-	def __init__(self, cmd, bufsize=-1,
-			stdin=None, stdout=None, universal_newlines=False, fail_on_error=True):
+	def __init__(self, cmd, **kwargs):
 		# zfs commands don't require setting both stdin and stdout
+		stdin = kwargs.pop('stdin', None)
+		stdout = kwargs.pop('stdout', None)
 		if stdin is not None and stdout is not None:
 			raise ValueError('only one of stdin or stdout may be set')
 
@@ -57,15 +58,18 @@ class Popen(superprocess.Popen):
 		if stdin is not None:
 			stdout = STDERR
 
+		# fail on error by default
+		fail_on_error = kwargs.pop('fail_on_error', True)
+
 		# start process
 		log.debug(' '.join(cmd))
-		super(Popen, self).__init__(cmd, bufsize=bufsize,
-			stdin=stdin, stdout=stdout, stderr=PIPE,
-			universal_newlines=universal_newlines, fail_on_error=True)
+		super(Popen, self).__init__(
+			cmd, stdin=stdin, stdout=stdout, stderr=PIPE,
+			fail_on_error=fail_on_error, **kwargs)
 
 		# set stderr aside for logging and ensure it is a text stream
 		stderr, self.stderr = self.stderr, None
-		if not universal_newlines:
+		if not kwargs.get('universal_newlines', False):
 			stderr = io.TextIOWrapper(stderr)
 
 		# set log level
