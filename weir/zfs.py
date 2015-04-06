@@ -1,8 +1,29 @@
 import logging
+from collections import defaultdict
+try:
+	from urllib.parse import urlsplit
+except ImportError:
+	from urlparse import urlsplit
 
 from weir import process
 
 log = logging.getLogger(__name__)
+
+# Split a dataset url into netloc and local dataset parts
+def _split_dataset(url):
+	parts = urlsplit(url)
+	return parts.netloc, parts.path.strip('/')
+
+# Split datasets and group by netloc
+def _group_datasets(datasets):
+	if not datasets:
+		return [(None, [])]
+
+	groups = defaultdict(list)
+	for url in datasets:
+		netloc, dataset = _split_dataset(url)
+		groups[netloc].append(dataset)
+	return groups.items()
 
 # Low level wrapper around zfs get command
 def _get(datasets, props, depth=0, sources=[]):
@@ -46,11 +67,12 @@ def _list(datasets, props, depth=0, types=[]):
 	cmd.append('-o')
 	cmd.append(','.join(props))
 
-	cmd.extend(datasets)
+	results = []
+	for netloc, datasets in _group_datasets(datasets):
+		for values in process.check_output(cmd + datasets, netloc=netloc):
+			results.append(dict(zip(props, values)))
 
-	# return parsed output as list of dicts
-	return [dict(zip(props, dataset))
-		for dataset in process.check_output(cmd)]
+	return results
 
 # Internal factory function to instantiate dataset object
 def _dataset(type, name):
