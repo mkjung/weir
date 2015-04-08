@@ -26,7 +26,7 @@ def _dataset(type, name):
 
 	raise ValueError('invalid dataset type %s' % type)
 
-def find(dataset, max_depth=None, types=[]):
+def find(dataset=None, max_depth=None, types=[]):
 	netloc, path = _split_dataset(dataset) if dataset else (None, None)
 
 	cmd = ['zfs', 'list']
@@ -54,7 +54,8 @@ def find(dataset, max_depth=None, types=[]):
 	return [_dataset(type, name) for name, type
 		in process.check_output(cmd, netloc=netloc)]
 
-def findprops(dataset, max_depth=None, props=['all'], sources=[], types=[]):
+def findprops(dataset=None, max_depth=None,
+		props=['all'], sources=[], types=[]):
 	netloc, path = _split_dataset(dataset) if dataset else (None, None)
 
 	cmd = ['zfs', 'get']
@@ -100,7 +101,7 @@ def open(name, types=[]):
 	return find(name, max_depth=0, types=types)[0]
 
 def root_datasets():
-	return find(None, max_depth=0)
+	return find(max_depth=0)
 
 # note: force means create missing parent filesystems
 def create(name, type='filesystem', props={}, force=False):
