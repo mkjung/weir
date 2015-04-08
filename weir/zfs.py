@@ -1,8 +1,8 @@
 import logging
 try:
-	from urllib.parse import urlsplit, SplitResult
+	from urllib.parse import urlsplit, urlunsplit, SplitResult
 except ImportError:
-	from urlparse import urlsplit, SplitResult
+	from urlparse import urlsplit, urlunsplit, SplitResult
 
 from weir import process
 
@@ -39,8 +39,8 @@ def find(path=None, max_depth=None, types=[]):
 	if url.path:
 		cmd.append(url.path)
 
-	return [open(name, type) for name, type
-		in process.check_output(cmd, netloc=url.netloc)]
+	return [open(urlunsplit((url.scheme, url.netloc, name, None, None)), type)
+		for name, type in process.check_output(cmd, netloc=url.netloc)]
 
 def findprops(path=None, max_depth=None,
 		props=['all'], sources=[], types=[]):
@@ -83,7 +83,8 @@ def findprops(path=None, max_depth=None,
 
 	cmd.extend(paths)
 
-	return [dict(name=n, netloc=url.netloc, property=p, value=v, source=s)
+	return [dict(name=urlunsplit((url.scheme, url.netloc, n, None, None)),
+			property=p, value=v, source=s)
 		for n, p, v, s in process.check_output(cmd, netloc=url.netloc)]
 
 # Factory function for dataset objects
