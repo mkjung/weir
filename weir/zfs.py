@@ -36,7 +36,8 @@ def _get(dataset, props, depth=0, sources=[]):
 	if path:
 		cmd.append(path)
 
-	return process.check_output(cmd, netloc=netloc)
+	return [dict(name=n, netloc=netloc, property=p, value=v, source=s)
+		for n, p, v, s in process.check_output(cmd, netloc=netloc)]
 
 # Low level wrapper around zfs list command
 def _list(dataset, props, depth=0, types=[]):
@@ -215,7 +216,7 @@ class ZFSDataset(object):
 		return _get(self.name, [prop])[0]
 
 	def getpropval(self, prop, default=None):
-		value = self.getprop(prop)[2]
+		value = self.getprop(prop)['value']
 		return default if value == '-' else value
 
 	def setprop(self, prop, value):
