@@ -26,7 +26,7 @@ def _dataset(type, name):
 
 	raise ValueError('invalid dataset type %s' % type)
 
-def find(dataset, depth=0, types=[]):
+def find(dataset, depth=None, types=[]):
 	netloc, path = _split_dataset(dataset) if dataset else (None, None)
 
 	cmd = ['zfs', 'list']
@@ -54,7 +54,7 @@ def find(dataset, depth=0, types=[]):
 	return [_dataset(type, name) for name, type
 		in process.check_output(cmd, netloc=netloc)]
 
-def findprops(dataset, depth=0, props=['all'], sources=[], types=[]):
+def findprops(dataset, depth=None, props=['all'], sources=[], types=[]):
 	netloc, path = _split_dataset(dataset) if dataset else (None, None)
 
 	cmd = ['zfs', 'get']
@@ -218,10 +218,10 @@ class ZFSDataset(object):
 		raise NotImplementedError()
 
 	def getprops(self):
-		return findprops(self.name)
+		return findprops(self.name, depth=0)
 
 	def getprop(self, prop):
-		return findprops(self.name, props=[prop])[0]
+		return findprops(self.name, depth=0, props=[prop])[0]
 
 	def getpropval(self, prop, default=None):
 		value = self.getprop(prop)['value']
