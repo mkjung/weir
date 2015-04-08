@@ -14,7 +14,7 @@ def _split_dataset(url):
 	return parts.netloc, parts.path.strip('/')
 
 # Low level wrapper around zfs get command
-def _get(datasets, props, depth=0, sources=[]):
+def _get(dataset, props, depth=0, sources=[]):
 	cmd = ['zfs', 'get']
 
 	if depth > 0:
@@ -32,7 +32,8 @@ def _get(datasets, props, depth=0, sources=[]):
 
 	cmd.append(','.join(props))
 
-	cmd.extend(datasets)
+	if dataset:
+		cmd.append(dataset)
 
 	return process.check_output(cmd)
 
@@ -207,10 +208,10 @@ class ZFSDataset(object):
 		raise NotImplementedError()
 
 	def getprops(self):
-		return _get([self.name], ['all'])
+		return _get(self.name, ['all'])
 
 	def getprop(self, prop):
-		return _get([self.name], [prop])[0]
+		return _get(self.name, [prop])[0]
 
 	def getpropval(self, prop, default=None):
 		value = self.getprop(prop)[2]
