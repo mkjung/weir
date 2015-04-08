@@ -13,32 +13,6 @@ def _split_dataset(url):
 	parts = urlsplit(url)
 	return parts.netloc, parts.path.strip('/')
 
-# Low level wrapper around zfs get command
-def _get(dataset, props, depth=0, sources=[]):
-	cmd = ['zfs', 'get']
-
-	if depth > 0:
-		cmd.append('-d')
-		cmd.append(str(depth))
-	elif depth < 0:
-		cmd.append('-r')
-
-	if sources:
-		cmd.append('-s')
-		cmd.append(','.join(sources))
-
-	cmd.append('-H')
-	cmd.append('-p')
-
-	cmd.append(','.join(props))
-
-	netloc, path = _split_dataset(dataset) if dataset else (None, None)
-	if path:
-		cmd.append(path)
-
-	return [dict(name=n, netloc=netloc, property=p, value=v, source=s)
-		for n, p, v, s in process.check_output(cmd, netloc=netloc)]
-
 # Low level wrapper around zfs list command
 def _list(dataset, props, depth=0, types=[]):
 	cmd = ['zfs', 'list']
@@ -84,6 +58,31 @@ def find(path, **kwargs):
 	types = kwargs.get('types', ['all'])
 	datasets = _list(path, ('name', 'type'), depth=depth, types=types)
 	return [_dataset(d['type'], d['name']) for d in datasets]
+
+def findprops(dataset, props, depth=0, sources=[]):
+	cmd = ['zfs', 'get']
+
+	if depth > 0:
+		cmd.append('-d')
+		cmd.append(str(depth))
+	elif depth < 0:
+		cmd.append('-r')
+
+	if sources:
+		cmd.append('-s')
+		cmd.append(','.join(sources))
+
+	cmd.append('-H')
+	cmd.append('-p')
+
+	cmd.append(','.join(props))
+
+	netloc, path = _split_dataset(dataset) if dataset else (None, None)
+	if path:
+		cmd.append(path)
+
+	return [dict(name=n, netloc=netloc, property=p, value=v, source=s)
+		for n, p, v, s in process.check_output(cmd, netloc=netloc)]
 
 def open(name, types=[]):
 	return find(name, depth=0, types=types)[0]
@@ -210,10 +209,10 @@ class ZFSDataset(object):
 		raise NotImplementedError()
 
 	def getprops(self):
-		return _get(self.name, ['all'])
+		return findprops(self.name, ['all'])
 
 	def getprop(self, prop):
-		return _get(self.name, [prop])[0]
+		return findprops(self.name, [prop])[0]
 
 	def getpropval(self, prop, default=None):
 		value = self.getprop(prop)['value']
