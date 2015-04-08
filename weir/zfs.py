@@ -1,20 +1,21 @@
 import logging
 try:
-	from urllib.parse import urlsplit
+	from urllib.parse import urlsplit, SplitResult
 except ImportError:
-	from urlparse import urlsplit
+	from urlparse import urlsplit, SplitResult
 
 from weir import process
 
 log = logging.getLogger(__name__)
 
-# Split a dataset url into netloc and local dataset parts
-def _split_dataset(url):
-	parts = urlsplit(url)
-	return parts.netloc, parts.path.strip('/')
+# Split a zfs dataset url
+def _urlsplit(url):
+	scheme, netloc, path, query, fragment = urlsplit(url)
+	return SplitResult(scheme, netloc, path.strip('/'), query, fragment)
 
-def find(dataset=None, max_depth=None, types=[]):
-	netloc, path = _split_dataset(dataset) if dataset else (None, None)
+def find(path=None, max_depth=None, types=[]):
+	url = _urlsplit(path) if path \
+		else SplitResult(None, None, None, None, None)
 
 	cmd = ['zfs', 'list']
 
@@ -35,15 +36,16 @@ def find(dataset=None, max_depth=None, types=[]):
 	cmd.append('-o')
 	cmd.append('name,type')
 
-	if path:
-		cmd.append(path)
+	if url.path:
+		cmd.append(url.path)
 
 	return [open(name, type) for name, type
-		in process.check_output(cmd, netloc=netloc)]
+		in process.check_output(cmd, netloc=url.netloc)]
 
-def findprops(dataset=None, max_depth=None,
+def findprops(path=None, max_depth=None,
 		props=['all'], sources=[], types=[]):
-	netloc, path = _split_dataset(dataset) if dataset else (None, None)
+	url = _urlsplit(path) if path \
+		else SplitResult(None, None, None, None, None)
 
 	cmd = ['zfs', 'get']
 
@@ -54,7 +56,7 @@ def findprops(dataset=None, max_depth=None,
 	# use zfs list to find relevant datasets
 	if True and types:
 		paths = [dataset.name for dataset in
-			find(dataset, max_depth=max_depth, types=types)]
+			find(path, max_depth=max_depth, types=types)]
 
 		if not paths:
 			return []
@@ -71,7 +73,7 @@ def findprops(dataset=None, max_depth=None,
 			cmd.append('-t')
 			cmd.append(','.join(types))
 
-		paths = [path] if path else []
+		paths = [url.path] if url.path else []
 
 	if sources:
 		cmd.append('-s')
@@ -81,8 +83,8 @@ def findprops(dataset=None, max_depth=None,
 
 	cmd.extend(paths)
 
-	return [dict(name=n, netloc=netloc, property=p, value=v, source=s)
-		for n, p, v, s in process.check_output(cmd, netloc=netloc)]
+	return [dict(name=n, netloc=url.netloc, property=p, value=v, source=s)
+		for n, p, v, s in process.check_output(cmd, netloc=url.netloc)]
 
 # Factory function for dataset objects
 def open(name, type=None):
