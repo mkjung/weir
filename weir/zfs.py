@@ -159,17 +159,14 @@ class ZFSDataset(object):
 		parent_name, _, _ = self.name.rpartition('/')
 		return open(parent_name) if parent_name else None
 
-	def filesystems(self, recursive=False):
-		depth = None if recursive else 1
-		return find(self.name, depth=depth, types=['filesystem'])[1:]
+	def filesystems(self):
+		return find(self.name, depth=1, types=['filesystem'])[1:]
 
-	def snapshots(self, recursive=False):
-		depth = None if recursive else 1
-		return find(self.name, depth=depth, types=['snapshot'])
+	def snapshots(self):
+		return find(self.name, depth=1, types=['snapshot'])
 
-	def children(self, recursive=False):
-		depth = None if recursive else 1
-		return find(self.name, depth=depth, types=['all'])[1:]
+	def children(self):
+		return find(self.name, depth=1, types=['all'])[1:]
 
 	def clones(self, recursive=False):
 		raise NotImplementedError()
