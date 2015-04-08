@@ -33,11 +33,13 @@ def find(dataset, depth=0, types=[]):
 
 	cmd.append('-H')
 
-	if depth >= 0:
+	if depth is None:
+		cmd.append('-r')
+	elif depth >= 0:
 		cmd.append('-d')
 		cmd.append(str(depth))
-	elif depth < 0:
-		cmd.append('-r')
+	else:
+		raise TypeError('depth must be a non-negative int or None')
 
 	if types:
 		cmd.append('-t')
@@ -69,11 +71,13 @@ def findprops(dataset, depth=0, props=['all'], sources=[], types=[]):
 		if not paths:
 			return []
 	else:
-		if depth > 0:
+		if depth is None:
+			cmd.append('-r')
+		elif depth > 0:
 			cmd.append('-d')
 			cmd.append(str(depth))
-		elif depth < 0:
-			cmd.append('-r')
+		else:
+			raise TypeError('depth must be a non-negative int or None')
 
 		if types:
 			cmd.append('-t')
