@@ -59,27 +59,42 @@ def find(path, **kwargs):
 	datasets = _list(path, ('name', 'type'), depth=depth, types=types)
 	return [_dataset(d['type'], d['name']) for d in datasets]
 
-def findprops(dataset, props, depth=0, sources=[]):
+def findprops(dataset, props, depth=0, sources=[], types=[]):
+	netloc, path = _split_dataset(dataset) if dataset else (None, None)
+
 	cmd = ['zfs', 'get']
 
-	if depth > 0:
-		cmd.append('-d')
-		cmd.append(str(depth))
-	elif depth < 0:
-		cmd.append('-r')
+	cmd.append('-H')
+	cmd.append('-p')
+
+	# workaround for lack of support for zfs get -t types in ZEVO:
+	# use zfs list to find relevant datasets
+	if True and types:
+		paths = [dataset.name for dataset in
+			find(dataset, depth=depth, types=types)]
+
+		if not paths:
+			return []
+	else:
+		if depth > 0:
+			cmd.append('-d')
+			cmd.append(str(depth))
+		elif depth < 0:
+			cmd.append('-r')
+
+		if types:
+			cmd.append('-t')
+			cmd.append(','.join(types))
+
+		paths = [path]
 
 	if sources:
 		cmd.append('-s')
 		cmd.append(','.join(sources))
 
-	cmd.append('-H')
-	cmd.append('-p')
-
 	cmd.append(','.join(props))
 
-	netloc, path = _split_dataset(dataset) if dataset else (None, None)
-	if path:
-		cmd.append(path)
+	cmd.extend(paths)
 
 	return [dict(name=n, netloc=netloc, property=p, value=v, source=s)
 		for n, p, v, s in process.check_output(cmd, netloc=netloc)]
