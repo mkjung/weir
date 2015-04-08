@@ -315,19 +315,22 @@ class ZFSSnapshot(ZFSDataset):
 			cmd.append('-D')
 
 		if base is not None:
+			base = _urlsplit(base)
+			if base.netloc and base.netloc != self._url.netloc:
+				raise ValueError('snapshots must be on same host')
 			if intermediates:
 				cmd.append('-I')
 			else:
 				cmd.append('-i')
-			cmd.append(base)
+			cmd.append(base.path)
 
-		cmd.append(self.name)
+		cmd.append(self._url.path)
 
 		# create and return pipe if no output file specified
 		if file is None:
-			return process.popen(cmd, mode='rb')
+			return process.popen(cmd, mode='rb', netloc=self._url.netloc)
 		else:
-			process.call(cmd, stdout=file)
+			process.call(cmd, stdout=file, netloc=self._url.netloc)
 
 	def hold(self, tag, recursive=False):
 		cmd = ['zfs', 'hold']
@@ -336,19 +339,20 @@ class ZFSSnapshot(ZFSDataset):
 			cmd.append('-r')
 
 		cmd.append(tag)
-		cmd.append(self.name)
+		cmd.append(self._url.path)
 
-		process.call(cmd)
+		process.call(cmd, netloc=self._url.netloc)
 
 	def holds(self):
 		cmd = ['zfs', 'holds']
 
 		cmd.append('-H')
 
-		cmd.append(self.name)
+		cmd.append(self._url.path)
 
 		# return hold tag names only
-		return [hold[1] for hold in process.check_output(cmd)]
+		return [hold[1] for hold
+			in process.check_output(cmd, netloc=self._url.netloc)]
 
 	def release(self, tag, recursive=False):
 		cmd = ['zfs', 'release']
@@ -357,6 +361,6 @@ class ZFSSnapshot(ZFSDataset):
 			cmd.append('-r')
 
 		cmd.append(tag)
-		cmd.append(self.name)
+		cmd.append(self._url.path)
 
-		process.call(cmd)
+		process.call(cmd, netloc=self._url.netloc)
