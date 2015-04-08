@@ -108,26 +108,26 @@ def roots():
 
 # note: force means create missing parent filesystems
 def create(name, type='filesystem', props={}, force=False):
-		url = _urlsplit(name)
+	url = _urlsplit(name)
 
-		cmd = ['zfs', 'create']
+	cmd = ['zfs', 'create']
 
-		if type == 'volume':
-			raise NotImplementedError()
-		elif type != 'filesystem':
-			raise ValueError('invalid type %s' % type)
+	if type == 'volume':
+		raise NotImplementedError()
+	elif type != 'filesystem':
+		raise ValueError('invalid type %s' % type)
 
-		if force:
-			cmd.append('-p')
+	if force:
+		cmd.append('-p')
 
-		for prop, value in props.items():
-			cmd.append('-o')
-			cmd.append(prop + '=' + str(value))
+	for prop, value in props.items():
+		cmd.append('-o')
+		cmd.append(prop + '=' + str(value))
 
-		cmd.append(url.path)
+	cmd.append(url.path)
 
-		process.call(cmd, netloc=url.netloc)
-		return ZFSFilesystem(name)
+	process.call(cmd, netloc=url.netloc)
+	return ZFSFilesystem(name)
 
 def receive(name, append_name=False, append_path=False,
 		force=False, nomount=False, file=None):
