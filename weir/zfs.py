@@ -1,5 +1,4 @@
 import logging
-from collections import defaultdict
 try:
 	from urllib.parse import urlsplit
 except ImportError:
@@ -13,17 +12,6 @@ log = logging.getLogger(__name__)
 def _split_dataset(url):
 	parts = urlsplit(url)
 	return parts.netloc, parts.path.strip('/')
-
-# Split datasets and group by netloc
-def _group_datasets(datasets):
-	if not datasets:
-		return [(None, [])]
-
-	groups = defaultdict(list)
-	for url in datasets:
-		netloc, dataset = _split_dataset(url)
-		groups[netloc].append(dataset)
-	return groups.items()
 
 # Low level wrapper around zfs get command
 def _get(datasets, props, depth=0, sources=[]):
@@ -49,7 +37,7 @@ def _get(datasets, props, depth=0, sources=[]):
 	return process.check_output(cmd)
 
 # Low level wrapper around zfs list command
-def _list(datasets, props, depth=0, types=[]):
+def _list(dataset, props, depth=0, types=[]):
 	cmd = ['zfs', 'list']
 
 	if depth >= 0:
@@ -67,12 +55,13 @@ def _list(datasets, props, depth=0, types=[]):
 	cmd.append('-o')
 	cmd.append(','.join(props))
 
-	results = []
-	for netloc, datasets in _group_datasets(datasets):
-		for values in process.check_output(cmd + datasets, netloc=netloc):
-			results.append(dict(zip(props, values)))
+	netloc, path = _split_dataset(dataset) if dataset else (None, None)
+	if path:
+		cmd.append(path)
 
-	return results
+	# return parsed output as list of dicts
+	return [dict(zip(props, dataset))
+		for dataset in process.check_output(cmd, netloc=netloc)]
 
 # Internal factory function to instantiate dataset object
 def _dataset(type, name):
@@ -88,10 +77,9 @@ def _dataset(type, name):
 	raise ValueError('invalid dataset type %s' % type)
 
 def find(path, **kwargs):
-	paths = [path] if path else []
 	depth = kwargs.get('depth', None)
 	types = kwargs.get('types', ['all'])
-	datasets = _list(paths, ('name', 'type'), depth=depth, types=types)
+	datasets = _list(path, ('name', 'type'), depth=depth, types=types)
 	return [_dataset(d['type'], d['name']) for d in datasets]
 
 def open(name, types=[]):
