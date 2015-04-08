@@ -13,22 +13,6 @@ def _split_dataset(url):
 	parts = urlsplit(url)
 	return parts.netloc, parts.path.strip('/')
 
-# Internal factory function to instantiate dataset object
-def _dataset(name, type=None):
-	if type is None:
-		type = findprops(name, max_depth=0, props=['type'])[0]['value']
-
-	if type == 'volume':
-		return ZFSVolume(name)
-
-	if type == 'filesystem':
-		return ZFSFilesystem(name)
-
-	if type == 'snapshot':
-		return ZFSSnapshot(name)
-
-	raise ValueError('invalid dataset type %s' % type)
-
 def find(dataset=None, max_depth=None, types=[]):
 	netloc, path = _split_dataset(dataset) if dataset else (None, None)
 
@@ -54,7 +38,7 @@ def find(dataset=None, max_depth=None, types=[]):
 	if path:
 		cmd.append(path)
 
-	return [_dataset(name, type) for name, type
+	return [open(name, type) for name, type
 		in process.check_output(cmd, netloc=netloc)]
 
 def findprops(dataset=None, max_depth=None,
@@ -100,10 +84,23 @@ def findprops(dataset=None, max_depth=None,
 	return [dict(name=n, netloc=netloc, property=p, value=v, source=s)
 		for n, p, v, s in process.check_output(cmd, netloc=netloc)]
 
-def open(name, types=[]):
-	return find(name, max_depth=0, types=types)[0]
+# Factory function for dataset objects
+def open(name, type=None):
+	if type is None:
+		type = findprops(name, max_depth=0, props=['type'])[0]['value']
 
-def root_datasets():
+	if type == 'volume':
+		return ZFSVolume(name)
+
+	if type == 'filesystem':
+		return ZFSFilesystem(name)
+
+	if type == 'snapshot':
+		return ZFSSnapshot(name)
+
+	raise ValueError('invalid dataset type %s' % type)
+
+def roots():
 	return find(max_depth=0)
 
 # note: force means create missing parent filesystems
