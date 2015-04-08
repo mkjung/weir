@@ -32,10 +32,11 @@ def _get(dataset, props, depth=0, sources=[]):
 
 	cmd.append(','.join(props))
 
-	if dataset:
-		cmd.append(dataset)
+	netloc, path = _split_dataset(dataset) if dataset else (None, None)
+	if path:
+		cmd.append(path)
 
-	return process.check_output(cmd)
+	return process.check_output(cmd, netloc=netloc)
 
 # Low level wrapper around zfs list command
 def _list(dataset, props, depth=0, types=[]):
