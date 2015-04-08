@@ -159,6 +159,7 @@ def receive(name, append_name=False, append_path=False,
 class ZFSDataset(object):
 	def __init__(self, name):
 		self.name = name
+		self._url = _urlsplit(name)
 
 	def __str__(self):
 		return self.name
@@ -194,9 +195,9 @@ class ZFSDataset(object):
 			cmd.append('-f')
 			cmd.append('-R')
 
-		cmd.append(self.name)
+		cmd.append(self._url.path)
 
-		process.call(cmd)
+		process.call(cmd, netloc=self._url.netloc)
 
 	def snapshot(self, snapname, recursive=False, props={}):
 		cmd = ['zfs', 'snapshot']
@@ -209,9 +210,10 @@ class ZFSDataset(object):
 			cmd.append(prop + '=' + str(value))
 
 		name = self.name + '@' + snapname
-		cmd.append(name)
+		url = _urlsplit(name)
+		cmd.append(url.path)
 
-		process.call(cmd)
+		process.call(cmd, netloc=url.netloc)
 		return ZFSSnapshot(name)
 
 	# TODO: split force to allow -f, -r and -R to be specified individually
@@ -239,9 +241,9 @@ class ZFSDataset(object):
 		cmd = ['zfs', 'set']
 
 		cmd.append(prop + '=' + str(value))
-		cmd.append(self.name)
+		cmd.append(self._url.path)
 
-		process.call(cmd)
+		process.call(cmd, netloc=self._url.netloc)
 
 	def delprop(self, prop, recursive=False):
 		cmd = ['zfs', 'inherit']
@@ -250,9 +252,9 @@ class ZFSDataset(object):
 			cmd.append('-r')
 
 		cmd.append(prop)
-		cmd.append(self.name)
+		cmd.append(self._url.path)
 
-		process.call(cmd)
+		process.call(cmd, netloc=self._url.netloc)
 
 	def userspace(self, *args, **kwargs):
 		raise NotImplementedError()
