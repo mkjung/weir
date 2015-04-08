@@ -60,7 +60,7 @@ def _list(dataset, props, depth=0, types=[]):
 		cmd.append(path)
 
 	# return parsed output as list of dicts
-	return [dict(zip(props, dataset))
+	return [dict(zip(props, dataset), netloc=netloc)
 		for dataset in process.check_output(cmd, netloc=netloc)]
 
 # Internal factory function to instantiate dataset object
