@@ -14,7 +14,10 @@ def _split_dataset(url):
 	return parts.netloc, parts.path.strip('/')
 
 # Internal factory function to instantiate dataset object
-def _dataset(type, name):
+def _dataset(name, type=None):
+	if type is None:
+		type = findprops(name, max_depth=0, props=['type'])[0]['value']
+
 	if type == 'volume':
 		return ZFSVolume(name)
 
@@ -51,7 +54,7 @@ def find(dataset=None, max_depth=None, types=[]):
 	if path:
 		cmd.append(path)
 
-	return [_dataset(type, name) for name, type
+	return [_dataset(name, type) for name, type
 		in process.check_output(cmd, netloc=netloc)]
 
 def findprops(dataset=None, max_depth=None,
