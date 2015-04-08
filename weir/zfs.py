@@ -87,7 +87,8 @@ def _dataset(type, name):
 
 	raise ValueError('invalid dataset type %s' % type)
 
-def find(*paths, **kwargs):
+def find(path, **kwargs):
+	paths = [path] if path else []
 	depth = kwargs.get('depth', None)
 	types = kwargs.get('types', ['all'])
 	datasets = _list(paths, ('name', 'type'), depth=depth, types=types)
@@ -97,7 +98,7 @@ def open(name, types=[]):
 	return find(name, depth=0, types=types)[0]
 
 def root_datasets():
-	return find(depth=0)
+	return find(None, depth=0)
 
 # note: force means create missing parent filesystems
 def create(name, type='filesystem', props={}, force=False):
