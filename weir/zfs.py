@@ -73,7 +73,7 @@ def findprops(dataset, depth=None, props=['all'], sources=[], types=[]):
 	else:
 		if depth is None:
 			cmd.append('-r')
-		elif depth > 0:
+		elif depth >= 0:
 			cmd.append('-d')
 			cmd.append(str(depth))
 		else:
