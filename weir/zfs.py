@@ -108,6 +108,8 @@ def roots():
 
 # note: force means create missing parent filesystems
 def create(name, type='filesystem', props={}, force=False):
+		url = _urlsplit(name)
+
 		cmd = ['zfs', 'create']
 
 		if type == 'volume':
@@ -122,13 +124,15 @@ def create(name, type='filesystem', props={}, force=False):
 			cmd.append('-o')
 			cmd.append(prop + '=' + str(value))
 
-		cmd.append(name)
+		cmd.append(url.path)
 
-		process.call(cmd)
+		process.call(cmd, netloc=url.netloc)
 		return ZFSFilesystem(name)
 
 def receive(name, append_name=False, append_path=False,
 		force=False, nomount=False, file=None):
+	url = _urlsplit(name)
+
 	cmd = ['zfs', 'receive']
 
 	if log.getEffectiveLevel() <= logging.INFO:
@@ -144,13 +148,13 @@ def receive(name, append_name=False, append_path=False,
 	if nomount:
 		cmd.append('-u')
 
-	cmd.append(name)
+	cmd.append(url.path)
 
 	# create and return pipe if no input file specified
 	if file is None:
-		return process.popen(cmd, mode='wb')
+		return process.popen(cmd, mode='wb', netloc=url.netloc)
 	else:
-		process.call(cmd, stdin=file)
+		process.call(cmd, stdin=file, netloc=url.netloc)
 
 class ZFSDataset(object):
 	def __init__(self, name):
