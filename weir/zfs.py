@@ -55,7 +55,7 @@ def findprops(path=None, max_depth=None,
 	# workaround for lack of support for zfs get -t types in ZEVO:
 	# use zfs list to find relevant datasets
 	if True and types:
-		paths = [dataset.name for dataset in
+		paths = [dataset._url.path for dataset in
 			find(path, max_depth=max_depth, types=types)]
 
 		if not paths:
