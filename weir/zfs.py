@@ -26,20 +26,20 @@ def _dataset(type, name):
 
 	raise ValueError('invalid dataset type %s' % type)
 
-def find(dataset, depth=None, types=[]):
+def find(dataset, max_depth=None, types=[]):
 	netloc, path = _split_dataset(dataset) if dataset else (None, None)
 
 	cmd = ['zfs', 'list']
 
 	cmd.append('-H')
 
-	if depth is None:
+	if max_depth is None:
 		cmd.append('-r')
-	elif depth >= 0:
+	elif max_depth >= 0:
 		cmd.append('-d')
-		cmd.append(str(depth))
+		cmd.append(str(max_depth))
 	else:
-		raise TypeError('depth must be a non-negative int or None')
+		raise TypeError('max_depth must be a non-negative int or None')
 
 	if types:
 		cmd.append('-t')
@@ -54,7 +54,7 @@ def find(dataset, depth=None, types=[]):
 	return [_dataset(type, name) for name, type
 		in process.check_output(cmd, netloc=netloc)]
 
-def findprops(dataset, depth=None, props=['all'], sources=[], types=[]):
+def findprops(dataset, max_depth=None, props=['all'], sources=[], types=[]):
 	netloc, path = _split_dataset(dataset) if dataset else (None, None)
 
 	cmd = ['zfs', 'get']
@@ -66,18 +66,18 @@ def findprops(dataset, depth=None, props=['all'], sources=[], types=[]):
 	# use zfs list to find relevant datasets
 	if True and types:
 		paths = [dataset.name for dataset in
-			find(dataset, depth=depth, types=types)]
+			find(dataset, max_depth=max_depth, types=types)]
 
 		if not paths:
 			return []
 	else:
-		if depth is None:
+		if max_depth is None:
 			cmd.append('-r')
-		elif depth >= 0:
+		elif max_depth >= 0:
 			cmd.append('-d')
-			cmd.append(str(depth))
+			cmd.append(str(max_depth))
 		else:
-			raise TypeError('depth must be a non-negative int or None')
+			raise TypeError('max_depth must be a non-negative int or None')
 
 		if types:
 			cmd.append('-t')
@@ -97,10 +97,10 @@ def findprops(dataset, depth=None, props=['all'], sources=[], types=[]):
 		for n, p, v, s in process.check_output(cmd, netloc=netloc)]
 
 def open(name, types=[]):
-	return find(name, depth=0, types=types)[0]
+	return find(name, max_depth=0, types=types)[0]
 
 def root_datasets():
-	return find(None, depth=0)
+	return find(None, max_depth=0)
 
 # note: force means create missing parent filesystems
 def create(name, type='filesystem', props={}, force=False):
@@ -160,13 +160,13 @@ class ZFSDataset(object):
 		return open(parent_name) if parent_name else None
 
 	def filesystems(self):
-		return find(self.name, depth=1, types=['filesystem'])[1:]
+		return find(self.name, max_depth=1, types=['filesystem'])[1:]
 
 	def snapshots(self):
-		return find(self.name, depth=1, types=['snapshot'])
+		return find(self.name, max_depth=1, types=['snapshot'])
 
 	def children(self):
-		return find(self.name, depth=1, types=['all'])[1:]
+		return find(self.name, max_depth=1, types=['all'])[1:]
 
 	def clones(self, recursive=False):
 		raise NotImplementedError()
@@ -218,10 +218,10 @@ class ZFSDataset(object):
 		raise NotImplementedError()
 
 	def getprops(self):
-		return findprops(self.name, depth=0)
+		return findprops(self.name, max_depth=0)
 
 	def getprop(self, prop):
-		return findprops(self.name, depth=0, props=[prop])[0]
+		return findprops(self.name, max_depth=0, props=[prop])[0]
 
 	def getpropval(self, prop, default=None):
 		value = self.getprop(prop)['value']
