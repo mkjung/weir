@@ -13,33 +13,6 @@ def _split_dataset(url):
 	parts = urlsplit(url)
 	return parts.netloc, parts.path.strip('/')
 
-# Low level wrapper around zfs list command
-def _list(dataset, props, depth=0, types=[]):
-	cmd = ['zfs', 'list']
-
-	if depth >= 0:
-		cmd.append('-d')
-		cmd.append(str(depth))
-	elif depth < 0:
-		cmd.append('-r')
-
-	if types:
-		cmd.append('-t')
-		cmd.append(','.join(types))
-
-	cmd.append('-H')
-
-	cmd.append('-o')
-	cmd.append(','.join(props))
-
-	netloc, path = _split_dataset(dataset) if dataset else (None, None)
-	if path:
-		cmd.append(path)
-
-	# return parsed output as list of dicts
-	return [dict(zip(props, dataset), netloc=netloc)
-		for dataset in process.check_output(cmd, netloc=netloc)]
-
 # Internal factory function to instantiate dataset object
 def _dataset(type, name):
 	if type == 'volume':
@@ -53,11 +26,31 @@ def _dataset(type, name):
 
 	raise ValueError('invalid dataset type %s' % type)
 
-def find(path, **kwargs):
-	depth = kwargs.get('depth', None)
-	types = kwargs.get('types', ['all'])
-	datasets = _list(path, ('name', 'type'), depth=depth, types=types)
-	return [_dataset(d['type'], d['name']) for d in datasets]
+def find(dataset, depth=0, types=[]):
+	netloc, path = _split_dataset(dataset) if dataset else (None, None)
+
+	cmd = ['zfs', 'list']
+
+	cmd.append('-H')
+
+	if depth >= 0:
+		cmd.append('-d')
+		cmd.append(str(depth))
+	elif depth < 0:
+		cmd.append('-r')
+
+	if types:
+		cmd.append('-t')
+		cmd.append(','.join(types))
+
+	cmd.append('-o')
+	cmd.append('name,type')
+
+	if path:
+		cmd.append(path)
+
+	return [_dataset(type, name) for name, type
+		in process.check_output(cmd, netloc=netloc)]
 
 def findprops(dataset, props, depth=0, sources=[], types=[]):
 	netloc, path = _split_dataset(dataset) if dataset else (None, None)
