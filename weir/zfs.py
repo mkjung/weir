@@ -83,7 +83,7 @@ def findprops(dataset, max_depth=None, props=['all'], sources=[], types=[]):
 			cmd.append('-t')
 			cmd.append(','.join(types))
 
-		paths = [path]
+		paths = [path] if path else []
 
 	if sources:
 		cmd.append('-s')
