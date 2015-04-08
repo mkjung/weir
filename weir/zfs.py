@@ -52,7 +52,7 @@ def find(dataset, depth=0, types=[]):
 	return [_dataset(type, name) for name, type
 		in process.check_output(cmd, netloc=netloc)]
 
-def findprops(dataset, props, depth=0, sources=[], types=[]):
+def findprops(dataset, depth=0, props=['all'], sources=[], types=[]):
 	netloc, path = _split_dataset(dataset) if dataset else (None, None)
 
 	cmd = ['zfs', 'get']
@@ -217,10 +217,10 @@ class ZFSDataset(object):
 		raise NotImplementedError()
 
 	def getprops(self):
-		return findprops(self.name, ['all'])
+		return findprops(self.name)
 
 	def getprop(self, prop):
-		return findprops(self.name, [prop])[0]
+		return findprops(self.name, props=[prop])[0]
 
 	def getpropval(self, prop, default=None):
 		value = self.getprop(prop)['value']
