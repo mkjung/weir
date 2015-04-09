@@ -289,12 +289,13 @@ class ZFSFilesystem(ZFSDataset):
 
 class ZFSSnapshot(ZFSDataset):
 	def snapname(self):
-		_, _, snapname = self.name.rpartition('@')
+		_, _, snapname = self._url.path.partition('@')
 		return snapname
 
 	def parent(self):
-		parent_name, _, _ = self.name.rpartition('@')
-		return open(parent_name) if parent_name else None
+		parent_path, _, _ = self._url.path.partition('@')
+		return open(urlunsplit(
+			(self._url.scheme, self._url.netloc, parent_path, None, None)))
 
 	# note: force means create missing parent filesystems
 	def clone(self, name, props={}, force=False):
