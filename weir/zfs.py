@@ -13,6 +13,12 @@ def _urlsplit(url):
 	scheme, netloc, path, query, fragment = urlsplit(url)
 	return SplitResult(scheme, netloc, path.strip('/'), query, fragment)
 
+# Replace components of url
+def _urlupdate(url, scheme=None, netloc=None,
+		path=None, query=None, fragment=None):
+	return urlunsplit(new if new is not None else old for new, old in
+		zip((scheme, netloc, path, query, fragment), urlsplit(url)))
+
 def find(path=None, max_depth=None, types=[]):
 	url = _urlsplit(path) if path \
 		else SplitResult(None, None, None, None, None)
@@ -39,7 +45,7 @@ def find(path=None, max_depth=None, types=[]):
 	if url.path:
 		cmd.append(url.path)
 
-	return [open(urlunsplit((url.scheme, url.netloc, name, None, None)), type)
+	return [open(_urlupdate(path, path=name), type)
 		for name, type in process.check_output(cmd, netloc=url.netloc)]
 
 def findprops(path=None, max_depth=None,
@@ -83,8 +89,7 @@ def findprops(path=None, max_depth=None,
 
 	cmd.extend(paths)
 
-	return [dict(name=urlunsplit((url.scheme, url.netloc, n, None, None)),
-			property=p, value=v, source=s)
+	return [dict(name=_urlupdate(path, path=n), property=p, value=v, source=s)
 		for n, p, v, s in process.check_output(cmd, netloc=url.netloc)]
 
 # Factory function for dataset objects
@@ -294,8 +299,7 @@ class ZFSSnapshot(ZFSDataset):
 
 	def parent(self):
 		parent_path, _, _ = self._url.path.partition('@')
-		return open(urlunsplit(
-			(self._url.scheme, self._url.netloc, parent_path, None, None)))
+		return open(_urlupdate(self.name, path=parent_path))
 
 	# note: force means create missing parent filesystems
 	def clone(self, name, props={}, force=False):
