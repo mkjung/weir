@@ -182,10 +182,10 @@ class ZFSDataset(object):
 	def children(self):
 		return find(self.name, max_depth=1, types=['all'])[1:]
 
-	def clones(self, recursive=False):
+	def clones(self):
 		raise NotImplementedError()
 
-	def dependents(self, recursive=False):
+	def dependents(self):
 		raise NotImplementedError()
 
 	# TODO: split force to allow -f, -r and -R to be specified individually
