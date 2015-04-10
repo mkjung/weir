@@ -11,8 +11,10 @@ rather than reproducing the C API exactly.  Key differences include:
 
 Weir is implemented on top of the command-line ``zfs`` and ``zpool``
 commands for portability and so as to facilitate support for remote
-operation without requiring installation on the remote host. Support
-for remote operation will be the focus for Weir 0.3.0.
+operation without requiring installation on the remote host.
+
+Remote datasets can be specified with urls of the form
+``zfs://user@host/path@snapname``.
 
 Installation
 ------------
@@ -27,8 +29,8 @@ Usage
 eg to find a filesystem's most recent snapshot:
 
 	>>> from weir import zfs
-	>>> zfs.open('zroot/test').snapshots()[-1].name
-	'zroot/test@auto-2015-02-02T112547'
+	>>> zfs.open('zfs://backup.local/wanaka/test').snapshots()[-1].name
+	'zfs://backup.local/wanaka/test@auto-2015-04-08T145240'
 
 License
 -------
