@@ -12,7 +12,7 @@ setup(
     description='A Python API for ZFS',
     long_description=long_description,
 
-    url='https://bitbucket.org/sjdrake/weir',
+    url='https://bitbucket.org/stevedrake/weir',
     author='Stephen Drake',
     author_email='steve@synergyconsultingnz.com',
 
