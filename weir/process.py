@@ -85,7 +85,7 @@ class Popen(superprocess.Popen):
 		# write stderr to log and store most recent line for analysis
 		def log_stderr():
 			with stderr as f:
-				for line in iter(f.readline, ''):
+				for line in f:
 					msg = line.strip()
 					log.log(log_level, msg)
 					self.err_msg = msg
