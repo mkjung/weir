@@ -1,6 +1,7 @@
 syntax: glob
 .DS_Store
 *.pyc
+*$py.class
 
 syntax: regexp
 ^dev/
