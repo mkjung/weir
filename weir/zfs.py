@@ -131,7 +131,7 @@ def create(name, type='filesystem', props={}, force=False):
 
 	cmd.append(url.path)
 
-	process.call(cmd, netloc=url.netloc)
+	process.check_call(cmd, netloc=url.netloc)
 	return ZFSFilesystem(name)
 
 def receive(name, append_name=False, append_path=False,
@@ -159,7 +159,7 @@ def receive(name, append_name=False, append_path=False,
 	if file is None:
 		return process.popen(cmd, mode='wb', netloc=url.netloc)
 	else:
-		process.call(cmd, stdin=file, netloc=url.netloc)
+		process.check_call(cmd, stdin=file, netloc=url.netloc)
 
 class ZFSDataset(object):
 	def __init__(self, name):
@@ -202,7 +202,7 @@ class ZFSDataset(object):
 
 		cmd.append(self._url.path)
 
-		process.call(cmd, netloc=self._url.netloc)
+		process.check_call(cmd, netloc=self._url.netloc)
 
 	def snapshot(self, snapname, recursive=False, props={}):
 		cmd = ['zfs', 'snapshot']
@@ -218,7 +218,7 @@ class ZFSDataset(object):
 		url = _urlsplit(name)
 		cmd.append(url.path)
 
-		process.call(cmd, netloc=url.netloc)
+		process.check_call(cmd, netloc=url.netloc)
 		return ZFSSnapshot(name)
 
 	# TODO: split force to allow -f, -r and -R to be specified individually
@@ -248,7 +248,7 @@ class ZFSDataset(object):
 		cmd.append(prop + '=' + str(value))
 		cmd.append(self._url.path)
 
-		process.call(cmd, netloc=self._url.netloc)
+		process.check_call(cmd, netloc=self._url.netloc)
 
 	def delprop(self, prop, recursive=False):
 		cmd = ['zfs', 'inherit']
@@ -259,7 +259,7 @@ class ZFSDataset(object):
 		cmd.append(prop)
 		cmd.append(self._url.path)
 
-		process.call(cmd, netloc=self._url.netloc)
+		process.check_call(cmd, netloc=self._url.netloc)
 
 	def userspace(self, *args, **kwargs):
 		raise NotImplementedError()
@@ -335,7 +335,7 @@ class ZFSSnapshot(ZFSDataset):
 		if file is None:
 			return process.popen(cmd, mode='rb', netloc=self._url.netloc)
 		else:
-			process.call(cmd, stdout=file, netloc=self._url.netloc)
+			process.check_call(cmd, stdout=file, netloc=self._url.netloc)
 
 	def hold(self, tag, recursive=False):
 		cmd = ['zfs', 'hold']
@@ -346,7 +346,7 @@ class ZFSSnapshot(ZFSDataset):
 		cmd.append(tag)
 		cmd.append(self._url.path)
 
-		process.call(cmd, netloc=self._url.netloc)
+		process.check_call(cmd, netloc=self._url.netloc)
 
 	def holds(self):
 		cmd = ['zfs', 'holds']
@@ -368,4 +368,4 @@ class ZFSSnapshot(ZFSDataset):
 		cmd.append(tag)
 		cmd.append(self._url.path)
 
-		process.call(cmd, netloc=self._url.netloc)
+		process.check_call(cmd, netloc=self._url.netloc)
