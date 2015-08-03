@@ -135,7 +135,7 @@ def create(name, type='filesystem', props={}, force=False):
 	return ZFSFilesystem(name)
 
 def receive(name, append_name=False, append_path=False,
-		force=False, nomount=False, file=None):
+		force=False, nomount=False):
 	url = _urlsplit(name)
 
 	cmd = ['zfs', 'receive']
@@ -155,11 +155,7 @@ def receive(name, append_name=False, append_path=False,
 
 	cmd.append(url.path)
 
-	# create and return pipe if no input file specified
-	if file is None:
-		return process.popen(cmd, mode='wb', netloc=url.netloc)
-	else:
-		process.check_call(cmd, stdin=file, netloc=url.netloc)
+	return process.popen(cmd, mode='wb', netloc=url.netloc)
 
 class ZFSDataset(object):
 	def __init__(self, name):
@@ -306,7 +302,7 @@ class ZFSSnapshot(ZFSDataset):
 		raise NotImplementedError()
 
 	def send(self, base=None, intermediates=False, replicate=False,
-			properties=False, deduplicate=False, file=None):
+			properties=False, deduplicate=False):
 		cmd = ['zfs', 'send']
 
 		if log.getEffectiveLevel() <= logging.INFO:
@@ -331,11 +327,7 @@ class ZFSSnapshot(ZFSDataset):
 
 		cmd.append(self._url.path)
 
-		# create and return pipe if no output file specified
-		if file is None:
-			return process.popen(cmd, mode='rb', netloc=self._url.netloc)
-		else:
-			process.check_call(cmd, stdout=file, netloc=self._url.netloc)
+		return process.popen(cmd, mode='rb', netloc=self._url.netloc)
 
 	def hold(self, tag, recursive=False):
 		cmd = ['zfs', 'hold']
