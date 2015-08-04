@@ -14,6 +14,9 @@ PIPE = superprocess.PIPE
 STDOUT = superprocess.PIPE
 STDERR = superprocess.STDERR
 CalledProcessError = superprocess.CalledProcessError
+check_call = superprocess.check_call
+check_output = superprocess.check_output
+popen = superprocess.popen
 
 class DatasetNotFoundError(OSError):
 	def __init__(self, dataset):
@@ -142,7 +145,3 @@ class Popen(superprocess.Popen):
 		return output, self._stderr_read()
 
 superprocess.Popen = Popen
-
-check_call = superprocess.check_call
-check_output = superprocess.check_output
-popen = superprocess.popen
