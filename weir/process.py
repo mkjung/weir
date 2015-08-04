@@ -135,15 +135,13 @@ class Popen(superprocess.Popen):
 
 	def communicate(self, *args, **kwargs):
 		stdout, _ = super(Popen, self).communicate(*args, **kwargs)
+		output = None if stdout is None else \
+			[tuple(line.split('\t')) for line in stdout.splitlines()]
 		self.err_thread.join()
-		return stdout, self.err_msg
+		return output, self.err_msg
 
 superprocess.Popen = Popen
 
 check_call = superprocess.check_call
-
-def check_output(cmd, **kwargs):
-	output = superprocess.check_output(cmd, **kwargs)
-	return [tuple(line.split('\t')) for line in output.splitlines()]
-
+check_output = superprocess.check_output
 popen = superprocess.popen
