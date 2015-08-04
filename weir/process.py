@@ -96,10 +96,14 @@ class Popen(superprocess.Popen):
 		if stdin is not None:
 			stdout = superprocess.STDERR
 
+		# use text mode by default
+		universal_newlines = kwargs.pop('universal_newlines', True)
+
 		# start process
 		log.debug(' '.join(cmd))
 		super(Popen, self).__init__(
-			cmd, stdin=stdin, stdout=stdout, stderr=superprocess.PIPE, **kwargs)
+			cmd, stdin=stdin, stdout=stdout, stderr=superprocess.PIPE,
+			universal_newlines=universal_newlines, **kwargs)
 
 		# set stderr aside for logging and ensure it is a text stream
 		stderr, self.stderr = self.stderr, None
@@ -139,8 +143,7 @@ superprocess.Popen = Popen
 check_call = superprocess.check_call
 
 def check_output(cmd, **kwargs):
-	output = superprocess.check_output(
-		cmd, universal_newlines=True, **kwargs)
+	output = superprocess.check_output(cmd, **kwargs)
 	return [tuple(line.split('\t')) for line in output.splitlines()]
 
 popen = superprocess.popen
