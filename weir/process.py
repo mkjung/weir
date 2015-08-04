@@ -121,24 +121,23 @@ class Popen(superprocess.Popen):
 			log_level = logging.DEBUG
 
 		# write stderr to log and store most recent line for analysis
+		_stderr = [None]
 		def log_stderr():
 			with stderr as f:
 				for line in f:
 					msg = line.strip()
 					log.log(log_level, msg)
-					self.err_msg = msg
+					_stderr[0] = msg
 		t = threading.Thread(target=log_stderr)
 		t.daemon = True
 		t.start()
-		self.err_thread = t
-		self.err_msg = None
+		self._stderr_read = lambda: t.join() or _stderr[0]
 
 	def communicate(self, *args, **kwargs):
 		stdout, _ = super(Popen, self).communicate(*args, **kwargs)
 		output = None if stdout is None else \
 			[tuple(line.split('\t')) for line in stdout.splitlines()]
-		self.err_thread.join()
-		return output, self.err_msg
+		return output, self._stderr_read()
 
 superprocess.Popen = Popen
 
