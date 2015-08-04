@@ -108,6 +108,8 @@ class Popen(superprocess.Popen):
 		# set stderr aside for logging and ensure it is a text stream
 		stderr, self.stderr = self.stderr, None
 		if not isinstance(stderr, io.TextIOBase):
+			if not isinstance(stderr, io.BufferedIOBase):
+				stderr = io.BufferedReader(stderr)
 			stderr = io.TextIOWrapper(stderr)
 
 		# set log level
