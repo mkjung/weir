@@ -4,9 +4,11 @@ import logging
 import re
 import threading
 
-import superprocess
+from superprocess import Superprocess
 
 log = logging.getLogger(__name__)
+
+superprocess = Superprocess()
 
 PIPE = superprocess.PIPE
 STDOUT = superprocess.PIPE
@@ -38,14 +40,50 @@ class HoldTagExistsError(OSError):
 		super(HoldTagExistsError, self).__init__(
 			errno.EEXIST, 'tag already exists on this dataset', dataset)
 
+class CompletedProcess(superprocess.CompletedProcess):
+	def check_returncode(self):
+		# skip tests if return code is zero
+		if not self.returncode:
+			return
+
+		# check for known errors
+		if self.returncode == 1:
+			# check for non-existent dataset
+			pattern = r"^cannot open '([^']+)': dataset does not exist$"
+			match = re.search(pattern, self.stderr)
+			if match:
+				raise DatasetNotFoundError(match.group(1))
+
+			# check for existing dataset
+			pattern = r"^cannot create \w+ '([^']+)': dataset already exists$"
+			match = re.search(pattern, self.stderr)
+			if match:
+				raise DatasetExistsError(match.group(1))
+
+			# check for busy dataset
+			pattern = r"^cannot destroy '([^']+)': dataset is busy$"
+			match = re.search(pattern, self.stderr)
+			if match:
+				raise DatasetBusyError(match.group(1))
+
+			# check for non-existent hold tag
+			pattern = r"^cannot release '[^']+' from '([^']+)': no such tag on this dataset$"
+			match = re.search(pattern, self.stderr)
+			if match:
+				raise HoldTagNotFoundError(match.group(1))
+
+			# check for existing hold tag
+			pattern = r"^cannot hold '([^']+)': tag already exists on this dataset$"
+			match = re.search(pattern, self.stderr)
+			if match:
+				raise HoldTagExistsError(match.group(1))
+
+		# unrecognised error - defer to superclass
+		super(CompletedProcess, self).check_returncode()
+
+superprocess.CompletedProcess = CompletedProcess
+
 class Popen(superprocess.Popen):
-	@classmethod
-	def check_output(cls, cmd, **kwargs):
-		output = super(Popen, cls).check_output(
-			cmd, universal_newlines=True, **kwargs)
-
-		return [tuple(line.split('\t')) for line in output.splitlines()]
-
 	def __init__(self, cmd, **kwargs):
 		# zfs commands don't require setting both stdin and stdout
 		stdin = kwargs.pop('stdin', None)
@@ -56,16 +94,12 @@ class Popen(superprocess.Popen):
 		# commands that accept input such as zfs receive may write
 		# verbose output to stdout - redirect it to stderr
 		if stdin is not None:
-			stdout = STDERR
-
-		# fail on error by default
-		fail_on_error = kwargs.pop('fail_on_error', True)
+			stdout = superprocess.STDERR
 
 		# start process
 		log.debug(' '.join(cmd))
 		super(Popen, self).__init__(
-			cmd, stdin=stdin, stdout=stdout, stderr=PIPE,
-			fail_on_error=fail_on_error, **kwargs)
+			cmd, stdin=stdin, stdout=stdout, stderr=superprocess.PIPE, **kwargs)
 
 		# set stderr aside for logging and ensure it is a text stream
 		stderr, self.stderr = self.stderr, None
@@ -93,51 +127,20 @@ class Popen(superprocess.Popen):
 		t.daemon = True
 		t.start()
 		self.err_thread = t
+		self.err_msg = None
 
-	def check(self):
-		# skip tests if return code is zero or not set yet
-		if not self.returncode:
-			return
-
-		# wait for stderr reader thread to finish
+	def communicate(self, *args, **kwargs):
+		stdout, _ = super(Popen, self).communicate(*args, **kwargs)
 		self.err_thread.join()
+		return stdout, self.err_msg
 
-		# check for known errors
-		if self.returncode == 1:
-			# check for non-existent dataset
-			pattern = r"^cannot open '([^']+)': dataset does not exist$"
-			match = re.search(pattern, self.err_msg)
-			if match:
-				raise DatasetNotFoundError(match.group(1))
+superprocess.Popen = Popen
 
-			# check for existing dataset
-			pattern = r"^cannot create \w+ '([^']+)': dataset already exists$"
-			match = re.search(pattern, self.err_msg)
-			if match:
-				raise DatasetExistsError(match.group(1))
+check_call = superprocess.check_call
 
-			# check for busy dataset
-			pattern = r"^cannot destroy '([^']+)': dataset is busy$"
-			match = re.search(pattern, self.err_msg)
-			if match:
-				raise DatasetBusyError(match.group(1))
+def check_output(cmd, **kwargs):
+	output = superprocess.check_output(
+		cmd, universal_newlines=True, **kwargs)
+	return [tuple(line.split('\t')) for line in output.splitlines()]
 
-			# check for non-existent hold tag
-			pattern = r"^cannot release '[^']+' from '([^']+)': no such tag on this dataset$"
-			match = re.search(pattern, self.err_msg)
-			if match:
-				raise HoldTagNotFoundError(match.group(1))
-
-			# check for existing hold tag
-			pattern = r"^cannot hold '([^']+)': tag already exists on this dataset$"
-			match = re.search(pattern, self.err_msg)
-			if match:
-				raise HoldTagExistsError(match.group(1))
-
-		# unrecognised error - defer to superclass
-		super(Popen, self).check()
-
-call = Popen.call
-check_call = Popen.check_call
-check_output = Popen.check_output
-popen = Popen.popen
+popen = superprocess.popen
