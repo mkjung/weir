@@ -33,6 +33,6 @@ setup(
     packages=['weir'],
 
     install_requires=[
-        'superprocess>=0.2.0.dev,<0.3.*',
+        'superprocess>=0.2.0,<0.3.*',
     ],
 )
