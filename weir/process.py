@@ -51,35 +51,22 @@ class CompletedProcess(superprocess.CompletedProcess):
 
 		# check for known errors
 		if self.returncode == 1:
-			# check for non-existent dataset
-			pattern = r"^cannot open '([^']+)': dataset does not exist$"
+			# parse error message
+			pattern = r"^cannot ([^ ]+(?: [^ ]+)*?) '([^']+)': (.+)$"
 			match = re.search(pattern, self.stderr)
 			if match:
-				raise DatasetNotFoundError(match.group(1))
+				action, dataset, reason = match.groups()
 
-			# check for existing dataset
-			pattern = r"^cannot create \w+ '([^']+)': dataset already exists$"
-			match = re.search(pattern, self.stderr)
-			if match:
-				raise DatasetExistsError(match.group(1))
-
-			# check for busy dataset
-			pattern = r"^cannot destroy '([^']+)': dataset is busy$"
-			match = re.search(pattern, self.stderr)
-			if match:
-				raise DatasetBusyError(match.group(1))
-
-			# check for non-existent hold tag
-			pattern = r"^cannot release '[^']+' from '([^']+)': no such tag on this dataset$"
-			match = re.search(pattern, self.stderr)
-			if match:
-				raise HoldTagNotFoundError(match.group(1))
-
-			# check for existing hold tag
-			pattern = r"^cannot hold '([^']+)': tag already exists on this dataset$"
-			match = re.search(pattern, self.stderr)
-			if match:
-				raise HoldTagExistsError(match.group(1))
+				if reason == 'dataset does not exist':
+					raise DatasetNotFoundError(dataset)
+				elif reason == 'dataset already exists':
+					raise DatasetExistsError(dataset)
+				elif reason == 'dataset is busy':
+					raise DatasetBusyError(dataset)
+				elif reason == 'no such tag on this dataset':
+					raise HoldTagNotFoundError(dataset)
+				elif reason == 'tag already exists on this dataset':
+					raise HoldTagExistsError(dataset)
 
 		# unrecognised error - defer to superclass
 		super(CompletedProcess, self).check_returncode()
