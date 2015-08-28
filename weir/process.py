@@ -1,4 +1,4 @@
-import errno
+import errno as _errno
 import io
 import logging
 import re
@@ -18,30 +18,29 @@ check_call = superprocess.check_call
 check_output = superprocess.check_output
 popen = superprocess.popen
 
-class DatasetNotFoundError(OSError):
+class ZFSError(OSError):
 	def __init__(self, dataset):
-		super(DatasetNotFoundError, self).__init__(
-			errno.ENOENT, 'dataset does not exist', dataset)
+		super(ZFSError, self).__init__(self.errno, self.strerror, dataset)
 
-class DatasetExistsError(OSError):
-	def __init__(self, dataset):
-		super(DatasetExistsError, self).__init__(
-			errno.EEXIST, 'dataset already exists', dataset)
+class DatasetNotFoundError(ZFSError):
+	errno = _errno.ENOENT
+	strerror = 'dataset does not exist'
 
-class DatasetBusyError(OSError):
-	def __init__(self, dataset):
-		super(DatasetBusyError, self).__init__(
-			errno.EBUSY, 'dataset is busy', dataset)
+class DatasetExistsError(ZFSError):
+	errno = _errno.EEXIST
+	strerror = 'dataset already exists'
 
-class HoldTagNotFoundError(OSError):
-	def __init__(self, dataset):
-		super(HoldTagNotFoundError, self).__init__(
-			errno.ENOENT, 'no such tag on this dataset', dataset)
+class DatasetBusyError(ZFSError):
+	errno = _errno.EBUSY
+	strerror = 'dataset is busy'
 
-class HoldTagExistsError(OSError):
-	def __init__(self, dataset):
-		super(HoldTagExistsError, self).__init__(
-			errno.EEXIST, 'tag already exists on this dataset', dataset)
+class HoldTagNotFoundError(ZFSError):
+	errno = _errno.ENOENT
+	strerror = 'no such tag on this dataset'
+
+class HoldTagExistsError(ZFSError):
+	errno = _errno.EEXIST
+	reason = 'tag already exists on this dataset'
 
 class CompletedProcess(superprocess.CompletedProcess):
 	def check_returncode(self):
