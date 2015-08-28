@@ -51,7 +51,7 @@ class CompletedProcess(superprocess.CompletedProcess):
 			match = re.search(pattern, self.stderr)
 			if match:
 				action, dataset, reason = match.groups()
-				dataset, = shlex.split(dataset)  # unquote dataset name
+				if dataset[0] == dataset[-1] == "'": dataset = dataset[1:-1]
 				for Error in (DatasetNotFoundError,
 						DatasetExistsError,
 						DatasetBusyError,
