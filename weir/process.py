@@ -55,17 +55,13 @@ class CompletedProcess(superprocess.CompletedProcess):
 			match = re.search(pattern, self.stderr)
 			if match:
 				action, dataset, reason = match.groups()
-
-				if reason == 'dataset does not exist':
-					raise DatasetNotFoundError(dataset)
-				elif reason == 'dataset already exists':
-					raise DatasetExistsError(dataset)
-				elif reason == 'dataset is busy':
-					raise DatasetBusyError(dataset)
-				elif reason == 'no such tag on this dataset':
-					raise HoldTagNotFoundError(dataset)
-				elif reason == 'tag already exists on this dataset':
-					raise HoldTagExistsError(dataset)
+				for Error in (DatasetNotFoundError,
+						DatasetExistsError,
+						DatasetBusyError,
+						HoldTagNotFoundError,
+						HoldTagExistsError,):
+					if reason == Error.strerror:
+						raise Error(dataset)
 
 		# unrecognised error - defer to superclass
 		super(CompletedProcess, self).check_returncode()
