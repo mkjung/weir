@@ -2,7 +2,6 @@ import errno as _errno
 import io
 import logging
 import re
-import shlex
 import threading
 
 from superprocess import Superprocess
