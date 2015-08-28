@@ -7,7 +7,7 @@ rather than reproducing the C API exactly.  Key differences include:
 
 - ZFS datasets are represented as objects.
 
-- ``send()`` and ``receive()`` can return an open file.
+- ``send()`` and ``receive()`` return open files.
 
 Weir is implemented on top of the command-line ``zfs`` and ``zpool``
 commands for portability and so as to facilitate support for remote
