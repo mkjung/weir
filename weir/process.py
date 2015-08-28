@@ -45,10 +45,6 @@ class HoldTagExistsError(ZFSError):
 
 class CompletedProcess(superprocess.CompletedProcess):
 	def check_returncode(self):
-		# skip tests if return code is zero
-		if not self.returncode:
-			return
-
 		# check for known errors of form "cannot <action> <dataset>: <reason>"
 		if self.returncode == 1:
 			pattern = r"^cannot ([^ ]+(?: [^ ]+)*?) ([^ :]+): (.+)$"
@@ -64,7 +60,7 @@ class CompletedProcess(superprocess.CompletedProcess):
 					if reason == Error.strerror:
 						raise Error(dataset)
 
-		# unrecognised error - defer to superclass
+		# did not match known errors, defer to superclass
 		super(CompletedProcess, self).check_returncode()
 
 superprocess.CompletedProcess = CompletedProcess
