@@ -2,6 +2,7 @@ import errno as _errno
 import io
 import logging
 import re
+import shlex
 import threading
 
 from superprocess import Superprocess
@@ -48,13 +49,13 @@ class CompletedProcess(superprocess.CompletedProcess):
 		if not self.returncode:
 			return
 
-		# check for known errors
+		# check for known errors of form "cannot <action> <dataset>: <reason>"
 		if self.returncode == 1:
-			# parse error message
-			pattern = r"^cannot ([^ ]+(?: [^ ]+)*?) '([^']+)': (.+)$"
+			pattern = r"^cannot ([^ ]+(?: [^ ]+)*?) ([^ :]+): (.+)$"
 			match = re.search(pattern, self.stderr)
 			if match:
 				action, dataset, reason = match.groups()
+				dataset, = shlex.split(dataset)  # unquote dataset name
 				for Error in (DatasetNotFoundError,
 						DatasetExistsError,
 						DatasetBusyError,
