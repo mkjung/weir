@@ -40,7 +40,7 @@ class HoldTagNotFoundError(ZFSError):
 
 class HoldTagExistsError(ZFSError):
 	errno = _errno.EEXIST
-	reason = 'tag already exists on this dataset'
+	strerror = 'tag already exists on this dataset'
 
 class CompletedProcess(superprocess.CompletedProcess):
 	def check_returncode(self):
