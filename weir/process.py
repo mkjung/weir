@@ -108,7 +108,7 @@ class Popen(superprocess.Popen):
 		def log_stderr():
 			with stderr as f:
 				for line in f:
-					msg = line.strip()
+					msg = line.rstrip('\n')
 					log.log(log_level, msg)
 					_stderr[0] = msg
 		t = threading.Thread(target=log_stderr)
