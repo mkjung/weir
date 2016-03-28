@@ -307,6 +307,7 @@ class ZFSSnapshot(ZFSDataset):
 		cmd = ['zfs', 'send']
 
 		cmd.append('-v')
+		cmd.append('-P')
 
 		if replicate:
 			cmd.append('-R')
