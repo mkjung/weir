@@ -140,8 +140,7 @@ def receive(name, append_name=False, append_path=False,
 
 	cmd = ['zfs', 'receive']
 
-	if log.getEffectiveLevel() <= logging.INFO:
-		cmd.append('-v')
+	cmd.append('-v')
 
 	if append_name:
 		cmd.append('-e')
@@ -188,6 +187,8 @@ class ZFSDataset(object):
 	# TODO: remove or ignore defer option for non-snapshot datasets
 	def destroy(self, defer=False, force=False):
 		cmd = ['zfs', 'destroy']
+
+		cmd.append('-v')
 
 		if defer:
 			cmd.append('-d')
@@ -305,8 +306,7 @@ class ZFSSnapshot(ZFSDataset):
 			properties=False, deduplicate=False):
 		cmd = ['zfs', 'send']
 
-		if log.getEffectiveLevel() <= logging.INFO:
-			cmd.append('-v')
+		cmd.append('-v')
 
 		if replicate:
 			cmd.append('-R')
