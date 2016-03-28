@@ -93,23 +93,13 @@ class Popen(superprocess.Popen):
 				stderr = io.BufferedReader(stderr)
 			stderr = io.TextIOWrapper(stderr)
 
-		# set log level
-		if '-v' in cmd:
-			# set log level to INFO for commands that output verbose
-			# info (send, receive, destroy, mount, upgrade)
-			log_level = logging.INFO
-		else:
-			# most commands only write to stderr on failure - in which case an
-			# exception will be generated and it's sufficient to log at DEBUG
-			log_level = logging.DEBUG
-
 		# write stderr to log and store most recent line for analysis
 		_stderr = [None]
 		def log_stderr():
 			with stderr as f:
 				for line in f:
 					msg = line.rstrip('\n')
-					log.log(log_level, msg)
+					log.debug(msg)
 					_stderr[0] = msg
 		t = threading.Thread(target=log_stderr)
 		t.daemon = True
