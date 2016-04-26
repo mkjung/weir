@@ -20,15 +20,15 @@ Installation
 ------------
 Requires Python 2.6, 2.7 or 3.4+ (see `system requirements`_ for more details).
 
-To install Weir, simply:
+To install Weir, simply::
 
-``$ pip install weir``
+	$ pip install weir
 
 .. _system requirements: https://bitbucket.org/stevedrake/weir/wiki/System_requirements
 
 Usage
 -----
-eg to find a filesystem's most recent snapshot:
+eg to find a filesystem's most recent snapshot::
 
 	>>> from weir import zfs
 	>>> zfs.open('zfs://backup.local/wanaka/test').snapshots()[-1].name
