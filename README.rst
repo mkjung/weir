@@ -18,11 +18,13 @@ Remote datasets can be specified with urls of the form
 
 Installation
 ------------
-Requires Python 2.6, 2.7 or 3.4+.
+Requires Python 2.6, 2.7 or 3.4+ (see `system requirements`_ for more details).
 
 To install Weir, simply:
 
 ``$ pip install weir``
+
+.. _system requirements: https://bitbucket.org/stevedrake/weir/wiki/System_requirements
 
 Usage
 -----
