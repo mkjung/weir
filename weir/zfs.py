@@ -165,7 +165,7 @@ class ZFSDataset(object):
 		return self.name
 
 	def __repr__(self):
-		return self.name
+		return '{0}({1!r})'.format(self.__class__.__name__, self.name)
 
 	def parent(self):
 		parent_name, _, _ = self.name.rpartition('/')
